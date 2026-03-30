@@ -23,66 +23,45 @@ Chart.register(
 })
 export class DashboardComponent implements OnInit {
   private http = inject(HttpClient);
-  private apiUrl = '/api/v1/admin';
+  private api = '/api/v1/admin';
 
   loading = signal(true);
   Math = Math;
 
-  // All API data signals
-  dashboard = signal<any>(null);
-  realtime = signal<any>(null);
-  kpi = signal<any>(null);
-  orderStats = signal<any>(null);
-  financialSummary = signal<any>(null);
-  platformHealth = signal<any>(null);
-  growth = signal<any>(null);
-  recentOrders = signal<any[]>([]);
-  topDrivers = signal<any[]>([]);
-  regionStats = signal<any[]>([]);
+  // Real API data
+  realtime = signal<any>(null);         // GET /statistics/realtime
+  financialSummary = signal<any>(null);  // GET /statistics/financial-summary
+  growth = signal<any>(null);            // GET /statistics/growth
+  regionStats = signal<any[]>([]);       // GET /statistics/regions
+  orderBoard = signal<any>(null);        // GET /orders/board
+  recentOrders = signal<any[]>([]);      // GET /orders
+  subscriptionStats = signal<any>(null); // GET /subscriptions/stats
+  disputeStats = signal<any>(null);      // GET /disputes/stats
+  refundStats = signal<any>(null);       // GET /refunds/stats
+  walletStats = signal<any>(null);       // GET /wallets/stats
+  vehicleStats = signal<any>(null);      // GET /vehicles/stats
+  driversCount = signal(0);
+  customersCount = signal(0);
+  partnersCount = signal(0);
 
-  // Revenue Line Chart
+  // Charts
   revenueChartData: ChartConfiguration<'line'>['data'] = { labels: [], datasets: [] };
   revenueChartOptions: ChartConfiguration<'line'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
+    responsive: true, maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
-      tooltip: {
-        backgroundColor: '#1A202C',
-        titleFont: { family: 'Tajawal', size: 13 },
-        bodyFont: { family: 'Tajawal', size: 12 },
-        rtl: true, textDirection: 'rtl', padding: 12, cornerRadius: 8,
-      }
+      tooltip: { backgroundColor: '#1A202C', titleFont: { family: 'Tajawal' }, bodyFont: { family: 'Tajawal' }, rtl: true, textDirection: 'rtl', padding: 12, cornerRadius: 8 }
     },
     scales: {
-      x: { grid: { display: false }, ticks: { font: { family: 'Tajawal', size: 12 }, color: '#718096' } },
-      y: { grid: { color: 'rgba(226, 232, 240, 0.5)' }, ticks: { font: { family: 'Tajawal', size: 12 }, color: '#718096' } }
-    }
-  };
-
-  // Order Status Doughnut - will be populated from API
-  orderStatusChartData: ChartConfiguration<'doughnut'>['data'] = {
-    labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0, hoverOffset: 4 }]
-  };
-  orderStatusChartOptions: ChartConfiguration<'doughnut'>['options'] = {
-    responsive: true, maintainAspectRatio: false, cutout: '70%',
-    plugins: {
-      legend: {
-        position: 'bottom', rtl: true,
-        labels: { font: { family: 'Tajawal', size: 12 }, color: '#4A5568', usePointStyle: true, pointStyle: 'circle', padding: 16 }
-      }
-    }
-  };
-
-  // Orders Bar Chart
-  ordersBarData: ChartConfiguration<'bar'>['data'] = { labels: [], datasets: [] };
-  ordersBarOptions: ChartConfiguration<'bar'>['options'] = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
       x: { grid: { display: false }, ticks: { font: { family: 'Tajawal', size: 11 }, color: '#718096' } },
-      y: { grid: { color: 'rgba(226, 232, 240, 0.5)' }, ticks: { font: { family: 'Tajawal', size: 11 }, color: '#718096' } }
+      y: { grid: { color: 'rgba(226,232,240,0.5)' }, ticks: { font: { family: 'Tajawal', size: 11 }, color: '#718096' } }
     }
+  };
+
+  orderBoardChartData: ChartConfiguration<'doughnut'>['data'] = { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0, hoverOffset: 4 }] };
+  orderBoardChartOptions: ChartConfiguration<'doughnut'>['options'] = {
+    responsive: true, maintainAspectRatio: false, cutout: '70%',
+    plugins: { legend: { position: 'bottom', rtl: true, labels: { font: { family: 'Tajawal', size: 12 }, color: '#4A5568', usePointStyle: true, pointStyle: 'circle', padding: 16 } } }
   };
 
   ngOnInit() { this.loadAll(); }
@@ -92,152 +71,148 @@ export class DashboardComponent implements OnInit {
     const now = new Date();
     const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const to = now.toISOString();
+    let loaded = 0;
+    const checkDone = () => { loaded++; if (loaded >= 13) this.loading.set(false); };
 
-    // 1. Dashboard Overview
-    this.http.get<any>(`${this.apiUrl}/statistics/dashboard`).subscribe({
-      next: (res) => { if (res.isSuccess) this.dashboard.set(res.data); }
+    // 1. Real-time stats
+    this.http.get<any>(`${this.api}/statistics/realtime`).subscribe({
+      next: r => { if (r.isSuccess) this.realtime.set(r.data); checkDone(); },
+      error: () => checkDone()
     });
 
-    // 2. Real-time Stats
-    this.http.get<any>(`${this.apiUrl}/statistics/realtime`).subscribe({
-      next: (res) => { if (res.isSuccess) this.realtime.set(res.data); }
-    });
-
-    // 3. KPI Dashboard
-    this.http.get<any>(`${this.apiUrl}/statistics/kpi?period=month`).subscribe({
-      next: (res) => { if (res.isSuccess) this.kpi.set(res.data); }
-    });
-
-    // 4. Revenue Chart (from API)
-    this.http.get<any>(`${this.apiUrl}/statistics/revenue?from=${from}&to=${to}&groupBy=day`).subscribe({
-      next: (res) => {
-        if (res.isSuccess && res.data?.timeline?.length) {
+    // 2. Revenue chart
+    this.http.get<any>(`${this.api}/statistics/revenue?from=${from}&to=${to}&groupBy=day`).subscribe({
+      next: r => {
+        if (r.isSuccess && r.data?.timeline?.length) {
           this.revenueChartData = {
-            labels: res.data.timeline.map((t: any) => {
-              const d = new Date(t.period);
-              return `${d.getDate()}/${d.getMonth() + 1}`;
-            }),
+            labels: r.data.timeline.map((t: any) => { const d = new Date(t.period); return `${d.getDate()}/${d.getMonth() + 1}`; }),
             datasets: [{
-              data: res.data.timeline.map((t: any) => t.revenue),
-              borderColor: '#FC5D01',
-              backgroundColor: 'rgba(252, 93, 1, 0.1)',
-              borderWidth: 2, fill: true, tension: 0.4,
-              pointRadius: 0, pointHoverRadius: 5, pointHoverBackgroundColor: '#FC5D01'
+              data: r.data.timeline.map((t: any) => t.revenue),
+              borderColor: '#FC5D01', backgroundColor: 'rgba(252,93,1,0.1)',
+              borderWidth: 2, fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 5, pointHoverBackgroundColor: '#FC5D01'
             }]
           };
         }
-      }
-    });
-
-    // 5. Order Statistics (for doughnut chart + order bar chart)
-    this.http.get<any>(`${this.apiUrl}/statistics/orders?from=${from}&to=${to}&groupBy=day`).subscribe({
-      next: (res) => {
-        if (res.isSuccess) {
-          this.orderStats.set(res.data);
-          // Populate doughnut from real data
-          if (res.data?.byStatus?.length) {
-            const statusColors: Record<string, string> = {
-              Delivered: '#38A169', Cancelled: '#E53E3E', InTransit: '#FC5D01',
-              Pending: '#3182CE', Accepted: '#805AD5', PickedUp: '#ECC94B',
-              Arrived: '#ECC94B', Returned: '#718096'
-            };
-            const statusLabels: Record<string, string> = {
-              Delivered: 'اتسلّم', Cancelled: 'ملغي', InTransit: 'في السكة',
-              Pending: 'مستني', Accepted: 'مقبول', PickedUp: 'تم الاستلام',
-              Arrived: 'وصل', Returned: 'مرتجع'
-            };
-            this.orderStatusChartData = {
-              labels: res.data.byStatus.map((s: any) => statusLabels[s.status] || s.status),
-              datasets: [{
-                data: res.data.byStatus.map((s: any) => s.count),
-                backgroundColor: res.data.byStatus.map((s: any) => statusColors[s.status] || '#A0AEC0'),
-                borderWidth: 0, hoverOffset: 4
-              }]
-            };
-          }
-          // Populate orders bar chart from timeline
-          if (res.data?.timeline?.length) {
-            this.ordersBarData = {
-              labels: res.data.timeline.map((t: any) => {
-                const d = new Date(t.period);
-                return `${d.getDate()}/${d.getMonth() + 1}`;
-              }),
-              datasets: [
-                {
-                  data: res.data.timeline.map((t: any) => t.completed),
-                  backgroundColor: '#38A169', label: 'مكتمل', borderRadius: 4
-                },
-                {
-                  data: res.data.timeline.map((t: any) => t.cancelled),
-                  backgroundColor: '#E53E3E', label: 'ملغي', borderRadius: 4
-                }
-              ]
-            };
-          }
-        }
-      }
-    });
-
-    // 6. Financial Summary
-    this.http.get<any>(`${this.apiUrl}/statistics/financial-summary?from=${from}&to=${to}`).subscribe({
-      next: (res) => { if (res.isSuccess) this.financialSummary.set(res.data); }
-    });
-
-    // 7. Platform Health
-    this.http.get<any>(`${this.apiUrl}/statistics/platform-health`).subscribe({
-      next: (res) => { if (res.isSuccess) this.platformHealth.set(res.data); }
-    });
-
-    // 8. Growth Metrics
-    this.http.get<any>(`${this.apiUrl}/statistics/growth?months=3`).subscribe({
-      next: (res) => { if (res.isSuccess) this.growth.set(res.data); }
-    });
-
-    // 9. Recent Orders (latest 5)
-    this.http.get<any>(`${this.apiUrl}/orders?pageNumber=1&pageSize=5&sortDesc=true`).subscribe({
-      next: (res) => { if (res.isSuccess) this.recentOrders.set(res.data?.items || []); }
-    });
-
-    // 10. Top Drivers
-    this.http.get<any>(`${this.apiUrl}/statistics/driver-performance?from=${from}&to=${to}&top=5`).subscribe({
-      next: (res) => { if (res.isSuccess) this.topDrivers.set(res.data?.topDrivers || []); }
-    });
-
-    // 11. Region Stats
-    this.http.get<any>(`${this.apiUrl}/statistics/regions?from=${from}&to=${to}`).subscribe({
-      next: (res) => {
-        if (res.isSuccess) this.regionStats.set(res.data || []);
-        this.loading.set(false);
+        checkDone();
       },
-      error: () => this.loading.set(false)
+      error: () => checkDone()
+    });
+
+    // 3. Financial summary
+    this.http.get<any>(`${this.api}/statistics/financial-summary?from=${from}&to=${to}`).subscribe({
+      next: r => { if (r.isSuccess) this.financialSummary.set(r.data); checkDone(); },
+      error: () => checkDone()
+    });
+
+    // 4. Growth
+    this.http.get<any>(`${this.api}/statistics/growth?months=3`).subscribe({
+      next: r => { if (r.isSuccess) this.growth.set(r.data); checkDone(); },
+      error: () => checkDone()
+    });
+
+    // 5. Region stats
+    this.http.get<any>(`${this.api}/statistics/regions?from=${from}&to=${to}`).subscribe({
+      next: r => { if (r.isSuccess) this.regionStats.set(r.data || []); checkDone(); },
+      error: () => checkDone()
+    });
+
+    // 6. Order board (real order status counts)
+    this.http.get<any>(`${this.api}/orders/board`).subscribe({
+      next: r => {
+        if (r.isSuccess && r.data) {
+          this.orderBoard.set(r.data);
+          const board = r.data;
+          const statuses = [
+            { label: 'مستني', count: board.pending?.count || 0, color: '#3182CE' },
+            { label: 'متعين', count: board.assigned?.count || 0, color: '#805AD5' },
+            { label: 'في السكة', count: board.inTransit?.count || 0, color: '#FC5D01' },
+            { label: 'اتسلّم', count: board.delivered?.count || 0, color: '#38A169' },
+            { label: 'ملغي', count: board.cancelled?.count || 0, color: '#E53E3E' },
+          ].filter(s => s.count > 0);
+          this.orderBoardChartData = {
+            labels: statuses.map(s => s.label),
+            datasets: [{ data: statuses.map(s => s.count), backgroundColor: statuses.map(s => s.color), borderWidth: 0, hoverOffset: 4 }]
+          };
+        }
+        checkDone();
+      },
+      error: () => checkDone()
+    });
+
+    // 7. Recent orders
+    this.http.get<any>(`${this.api}/orders?pageNumber=1&pageSize=5&sortDesc=true`).subscribe({
+      next: r => { if (r.isSuccess) this.recentOrders.set(r.data?.items || []); checkDone(); },
+      error: () => checkDone()
+    });
+
+    // 8. Subscription stats
+    this.http.get<any>(`${this.api}/subscriptions/stats`).subscribe({
+      next: r => { if (r.isSuccess) this.subscriptionStats.set(r.data); checkDone(); },
+      error: () => checkDone()
+    });
+
+    // 9. Dispute stats
+    this.http.get<any>(`${this.api}/disputes/stats`).subscribe({
+      next: r => { if (r.isSuccess) this.disputeStats.set(r.data); checkDone(); },
+      error: () => checkDone()
+    });
+
+    // 10. Refund stats
+    this.http.get<any>(`${this.api}/refunds/stats`).subscribe({
+      next: r => { if (r.isSuccess) this.refundStats.set(r.data); checkDone(); },
+      error: () => checkDone()
+    });
+
+    // 11. Wallet stats
+    this.http.get<any>(`${this.api}/wallets/stats`).subscribe({
+      next: r => { if (r.isSuccess) this.walletStats.set(r.data); checkDone(); },
+      error: () => checkDone()
+    });
+
+    // 12. Vehicle stats
+    this.http.get<any>(`${this.api}/vehicles/stats`).subscribe({
+      next: r => { if (r.isSuccess) this.vehicleStats.set(r.data); checkDone(); },
+      error: () => checkDone()
+    });
+
+    // 13. Counts (drivers, customers, partners)
+    this.http.get<any>(`${this.api}/drivers?pageNumber=1&pageSize=1`).subscribe({
+      next: r => { if (r.isSuccess) this.driversCount.set(r.data?.totalCount || 0); }
+    });
+    this.http.get<any>(`${this.api}/customers?pageNumber=1&pageSize=1`).subscribe({
+      next: r => { if (r.isSuccess) this.customersCount.set(r.data?.totalCount || 0); }
+    });
+    this.http.get<any>(`${this.api}/partners?pageNumber=1&pageSize=1`).subscribe({
+      next: r => { if (r.isSuccess) this.partnersCount.set(r.data?.totalCount || 0); checkDone(); },
+      error: () => checkDone()
     });
   }
 
-  getOrderStatusBadge(status: number): string {
-    const map: Record<number, string> = {
-      0: 'badge-pending', 1: 'badge-info', 2: 'badge-info', 3: 'badge-in-transit',
-      4: 'badge-arrived', 5: 'badge-delivered', 6: 'badge-cancelled', 7: 'badge-returned'
-    };
-    return map[status] || 'badge-inactive';
+  getTotalBoardOrders(): number {
+    const b = this.orderBoard();
+    if (!b) return 0;
+    return (b.pending?.count || 0) + (b.assigned?.count || 0) + (b.inTransit?.count || 0) + (b.delivered?.count || 0) + (b.cancelled?.count || 0);
   }
 
-  getOrderStatusName(status: number): string {
-    const map: Record<number, string> = {
-      0: 'مستني', 1: 'مقبول', 2: 'تم الاستلام', 3: 'في السكة',
-      4: 'وصل', 5: 'اتسلّم', 6: 'ملغي', 7: 'مرتجع'
-    };
-    return map[status] || '—';
+  getStatusBadge(status: number): string {
+    const m: Record<number, string> = { 0: 'badge-pending', 1: 'badge-info', 2: 'badge-info', 3: 'badge-in-transit', 4: 'badge-arrived', 5: 'badge-delivered', 6: 'badge-cancelled', 7: 'badge-returned' };
+    return m[status] || 'badge-inactive';
   }
 
-  formatNumber(num: number | undefined): string {
-    if (!num) return '0';
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return num.toLocaleString('ar-EG');
+  getStatusName(status: number): string {
+    const m: Record<number, string> = { 0: 'مستني', 1: 'مقبول', 2: 'تم الاستلام', 3: 'في السكة', 4: 'وصل', 5: 'اتسلّم', 6: 'ملغي', 7: 'مرتجع' };
+    return m[status] || '—';
   }
 
-  formatCurrency(num: number | undefined): string {
-    if (!num) return '0 ج.م';
-    return num.toLocaleString('ar-EG') + ' ج.م';
+  fmt(n: number | undefined): string {
+    if (!n) return '0';
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+    return n.toLocaleString('ar-EG');
+  }
+
+  money(n: number | undefined): string {
+    if (!n) return '0 ج.م';
+    return n.toLocaleString('ar-EG') + ' ج.م';
   }
 }

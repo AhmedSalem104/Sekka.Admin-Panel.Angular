@@ -1,19 +1,10 @@
 <div class="page-container">
-  <!-- Page Header -->
   <div class="page-header">
     <div>
       <h1>لوحة التحكم</h1>
-      <p class="page-subtitle">نظرة عامة على أداء سِكّة اليوم</p>
+      <p class="page-subtitle">نظرة عامة على أداء سِكّة</p>
     </div>
     <div class="header-actions-row">
-      @if (platformHealth(); as ph) {
-        <div class="live-indicator" [style.border-color]="ph.errorRate < 1 ? 'rgba(56,161,105,0.3)' : 'rgba(229,62,62,0.3)'"
-             [style.background]="ph.errorRate < 1 ? 'rgba(56,161,105,0.1)' : 'rgba(229,62,62,0.1)'"
-             [style.color]="ph.errorRate < 1 ? '#38A169' : '#E53E3E'">
-          <span class="live-dot" [style.background]="ph.errorRate < 1 ? '#38A169' : '#E53E3E'"></span>
-          Uptime {{ ph.systemUptime }}%
-        </div>
-      }
       <div class="live-indicator">
         <span class="live-dot"></span>
         مباشر
@@ -21,432 +12,387 @@
     </div>
   </div>
 
-  <!-- KPI Stats Cards (from /statistics/dashboard) -->
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-icon" style="background: rgba(252, 93, 1, 0.1); color: #FC5D01;">📦</div>
-      <div class="stat-content">
-        <div class="stat-label">طلبات اليوم</div>
-        <div class="stat-value">{{ formatNumber(dashboard()?.todayOrders) }}</div>
-        @if (dashboard()?.comparedToYesterday?.orders; as change) {
-          <div class="stat-change" [class.positive]="change > 0" [class.negative]="change < 0">
-            {{ change > 0 ? '↑' : '↓' }} {{ change > 0 ? change : -change }}%
-          </div>
-        }
-      </div>
-    </div>
+  @if (loading()) {
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  } @else {
 
-    <div class="stat-card">
-      <div class="stat-icon" style="background: rgba(56, 161, 105, 0.1); color: #38A169;">💰</div>
-      <div class="stat-content">
-        <div class="stat-label">إيرادات اليوم</div>
-        <div class="stat-value">{{ formatCurrency(dashboard()?.todayRevenue) }}</div>
-        @if (dashboard()?.comparedToYesterday?.revenue; as change) {
-          <div class="stat-change" [class.positive]="change > 0" [class.negative]="change < 0">
-            {{ change > 0 ? '↑' : '↓' }} {{ change > 0 ? change : -change }}%
-          </div>
-        }
-      </div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-icon" style="background: rgba(49, 130, 206, 0.1); color: #3182CE;">🚗</div>
-      <div class="stat-content">
-        <div class="stat-label">سائقين أونلاين</div>
-        <div class="stat-value">{{ formatNumber(dashboard()?.onlineDrivers) }}</div>
-        <div class="stat-sub">من {{ formatNumber(dashboard()?.activeDrivers) }} نشط</div>
-      </div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-icon" style="background: rgba(128, 90, 213, 0.1); color: #805AD5;">✅</div>
-      <div class="stat-content">
-        <div class="stat-label">معدل الإتمام</div>
-        <div class="stat-value">{{ dashboard()?.orderCompletionRate || 0 }}%</div>
-        <div class="stat-sub">متوسط التوصيل: {{ dashboard()?.averageDeliveryTime || 0 }} دقيقة</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Real-Time Strip (from /statistics/realtime) -->
-  @if (realtime(); as rt) {
-    <div class="realtime-strip">
-      <div class="realtime-item">
-        <span class="realtime-label">طلبات نشطة</span>
-        <span class="realtime-value primary">{{ rt.activeOrders }}</span>
-      </div>
-      <div class="realtime-divider"></div>
-      <div class="realtime-item">
-        <span class="realtime-label">مستنية</span>
-        <span class="realtime-value warning">{{ rt.pendingOrders }}</span>
-      </div>
-      <div class="realtime-divider"></div>
-      <div class="realtime-item">
-        <span class="realtime-label">في السكة</span>
-        <span class="realtime-value info">{{ rt.inTransitOrders }}</span>
-      </div>
-      <div class="realtime-divider"></div>
-      <div class="realtime-item">
-        <span class="realtime-label">سائقين أونلاين</span>
-        <span class="realtime-value success">{{ rt.onlineDrivers }}</span>
-      </div>
-      <div class="realtime-divider"></div>
-      <div class="realtime-item">
-        <span class="realtime-label">سائقين فاضيين</span>
-        <span class="realtime-value success">{{ rt.availableDrivers }}</span>
-      </div>
-      <div class="realtime-divider"></div>
-      <div class="realtime-item">
-        <span class="realtime-label">سائقين مشغولين</span>
-        <span class="realtime-value primary">{{ rt.busyDrivers }}</span>
-      </div>
-      <div class="realtime-divider"></div>
-      <div class="realtime-item">
-        <span class="realtime-label">طلبات/دقيقة</span>
-        <span class="realtime-value">{{ rt.ordersPerMinute }}</span>
-      </div>
-      <div class="realtime-divider"></div>
-      <div class="realtime-item">
-        <span class="realtime-label">متوسط الانتظار</span>
-        <span class="realtime-value warning">{{ rt.averageWaitTime }} د</span>
-      </div>
-    </div>
-  }
-
-  <!-- Charts Row -->
-  <div class="charts-row">
-    <!-- Revenue Line Chart (from /statistics/revenue) -->
-    <div class="card chart-card">
-      <div class="card-header">
-        <h3>الإيرادات اليومية</h3>
-        <span class="badge badge-info">هذا الشهر</span>
-      </div>
-      <div class="chart-container">
-        <canvas baseChart [data]="revenueChartData" [options]="revenueChartOptions" type="line"></canvas>
-      </div>
-    </div>
-
-    <!-- Order Status Doughnut (from /statistics/orders → byStatus) -->
-    <div class="card chart-card chart-card-sm">
-      <div class="card-header">
-        <h3>حالات الطلبات</h3>
-      </div>
-      <div class="chart-container">
-        <canvas baseChart [data]="orderStatusChartData" [options]="orderStatusChartOptions" type="doughnut"></canvas>
-      </div>
-      @if (orderStats(); as os) {
-        <div style="text-align: center; margin-top: 8px;">
-          <span style="font-size: 24px; font-weight: 700; color: var(--text-headline);">{{ os.totalOrders }}</span>
-          <span style="font-size: 13px; color: var(--text-caption);"> طلب</span>
+    <!-- === ROW 1: Real-time Strip (from /statistics/realtime) === -->
+    @if (realtime(); as rt) {
+      <div class="realtime-strip">
+        <div class="realtime-item">
+          <span class="realtime-label">طلبات نشطة</span>
+          <span class="realtime-value primary">{{ rt.activeOrders || 0 }}</span>
         </div>
-      }
-    </div>
-  </div>
-
-  <!-- Orders Bar Chart (from /statistics/orders → timeline) -->
-  @if (ordersBarData.labels?.length) {
-    <div class="card chart-card" style="margin-top: var(--space-lg);">
-      <div class="card-header">
-        <h3>الطلبات اليومية (مكتمل vs ملغي)</h3>
-      </div>
-      <div class="chart-container">
-        <canvas baseChart [data]="ordersBarData" [options]="ordersBarOptions" type="bar"></canvas>
-      </div>
-    </div>
-  }
-
-  <!-- KPI Cards (from /statistics/kpi) -->
-  @if (kpi(); as k) {
-    <div class="kpi-section">
-      <h2 class="section-title">مؤشرات الأداء الرئيسية (KPIs)</h2>
-      <div class="kpi-grid">
-        <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-label">معدل إتمام الطلبات</span>
-            <span class="kpi-trend" [class.positive]="k.orderCompletionRate?.trend > 0" [class.negative]="k.orderCompletionRate?.trend < 0">
-              {{ k.orderCompletionRate?.trend > 0 ? '↑' : '↓' }} {{ k.orderCompletionRate?.trend }}%
-            </span>
-          </div>
-          <div class="kpi-value">{{ k.orderCompletionRate?.value }}%</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill success" [style.width.%]="k.orderCompletionRate?.value"></div></div>
-          <div class="kpi-target">الهدف: {{ k.orderCompletionRate?.target }}%</div>
+        <div class="realtime-divider"></div>
+        <div class="realtime-item">
+          <span class="realtime-label">مستنية</span>
+          <span class="realtime-value warning">{{ rt.pendingOrders || 0 }}</span>
         </div>
-
-        <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-label">متوسط وقت التوصيل</span>
-            <span class="kpi-trend" [class.positive]="k.averageDeliveryTime?.trend < 0" [class.negative]="k.averageDeliveryTime?.trend > 0">
-              {{ k.averageDeliveryTime?.trend < 0 ? '↓' : '↑' }} {{ k.averageDeliveryTime?.trend }} دقيقة
-            </span>
-          </div>
-          <div class="kpi-value">{{ k.averageDeliveryTime?.value }} <small>دقيقة</small></div>
-          <div class="kpi-bar"><div class="kpi-bar-fill info" [style.width.%]="Math.max(0, (1 - (k.averageDeliveryTime?.value || 0) / 60) * 100)"></div></div>
-          <div class="kpi-target">الهدف: {{ k.averageDeliveryTime?.target }} دقيقة</div>
+        <div class="realtime-divider"></div>
+        <div class="realtime-item">
+          <span class="realtime-label">في السكة</span>
+          <span class="realtime-value info">{{ rt.inTransitOrders || 0 }}</span>
         </div>
-
-        <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-label">رضا العملاء</span>
-            <span class="kpi-trend" [class.positive]="k.customerSatisfaction?.trend > 0" [class.negative]="k.customerSatisfaction?.trend < 0">
-              {{ k.customerSatisfaction?.trend > 0 ? '↑' : '↓' }} {{ k.customerSatisfaction?.trend }}
-            </span>
-          </div>
-          <div class="kpi-value">{{ k.customerSatisfaction?.value }} <small>/ 5</small></div>
-          <div class="kpi-bar"><div class="kpi-bar-fill warning" [style.width.%]="(k.customerSatisfaction?.value || 0) / 5 * 100"></div></div>
-          <div class="kpi-target">الهدف: {{ k.customerSatisfaction?.target }}</div>
+        <div class="realtime-divider"></div>
+        <div class="realtime-item">
+          <span class="realtime-label">سائقين أونلاين</span>
+          <span class="realtime-value success">{{ rt.onlineDrivers || 0 }}</span>
         </div>
-
-        <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-label">نمو الإيرادات</span>
-            <span class="kpi-trend" [class.positive]="k.revenueGrowth?.trend > 0" [class.negative]="k.revenueGrowth?.trend < 0">
-              {{ k.revenueGrowth?.trend > 0 ? '↑' : '↓' }} {{ k.revenueGrowth?.trend }}%
-            </span>
-          </div>
-          <div class="kpi-value">{{ k.revenueGrowth?.value }}%</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill primary" [style.width.%]="Math.min((k.revenueGrowth?.value || 0) / 25 * 100, 100)"></div></div>
-          <div class="kpi-target">الهدف: {{ k.revenueGrowth?.target }}%</div>
+        <div class="realtime-divider"></div>
+        <div class="realtime-item">
+          <span class="realtime-label">فاضيين</span>
+          <span class="realtime-value success">{{ rt.availableDrivers || 0 }}</span>
         </div>
-
-        <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-label">استغلال السائقين</span>
-            <span class="kpi-trend" [class.positive]="k.driverUtilization?.trend > 0" [class.negative]="k.driverUtilization?.trend < 0">
-              {{ k.driverUtilization?.trend > 0 ? '↑' : '↓' }} {{ k.driverUtilization?.trend }}%
-            </span>
-          </div>
-          <div class="kpi-value">{{ k.driverUtilization?.value }}%</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill info" [style.width.%]="k.driverUtilization?.value"></div></div>
-          <div class="kpi-target">الهدف: {{ k.driverUtilization?.target }}%</div>
+        <div class="realtime-divider"></div>
+        <div class="realtime-item">
+          <span class="realtime-label">مشغولين</span>
+          <span class="realtime-value primary">{{ rt.busyDrivers || 0 }}</span>
         </div>
-
-        <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-label">الاحتفاظ بالعملاء</span>
-            <span class="kpi-trend" [class.positive]="k.customerRetention?.trend > 0" [class.negative]="k.customerRetention?.trend < 0">
-              {{ k.customerRetention?.trend > 0 ? '↑' : '↓' }} {{ k.customerRetention?.trend }}%
-            </span>
-          </div>
-          <div class="kpi-value">{{ k.customerRetention?.value }}%</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill success" [style.width.%]="k.customerRetention?.value"></div></div>
-          <div class="kpi-target">الهدف: {{ k.customerRetention?.target }}%</div>
+        <div class="realtime-divider"></div>
+        <div class="realtime-item">
+          <span class="realtime-label">طلبات/دقيقة</span>
+          <span class="realtime-value">{{ rt.ordersPerMinute || 0 }}</span>
         </div>
-
-        <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-label">مستخدمين جدد</span>
-            <span class="kpi-trend" [class.positive]="k.newUserAcquisition?.trend > 0" [class.negative]="k.newUserAcquisition?.trend < 0">
-              {{ k.newUserAcquisition?.trend > 0 ? '↑' : '↓' }} {{ k.newUserAcquisition?.trend }}%
-            </span>
-          </div>
-          <div class="kpi-value">{{ k.newUserAcquisition?.value }}</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill primary" [style.width.%]="Math.min((k.newUserAcquisition?.value || 0) / (k.newUserAcquisition?.target || 1) * 100, 100)"></div></div>
-          <div class="kpi-target">الهدف: {{ k.newUserAcquisition?.target }}</div>
-        </div>
-
-        <div class="kpi-card">
-          <div class="kpi-header">
-            <span class="kpi-label">معدل الاسترداد</span>
-            <span class="kpi-trend" [class.positive]="k.refundRate?.trend < 0" [class.negative]="k.refundRate?.trend > 0">
-              {{ k.refundRate?.trend < 0 ? '↓' : '↑' }} {{ k.refundRate?.trend }}%
-            </span>
-          </div>
-          <div class="kpi-value">{{ k.refundRate?.value }}%</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill warning" [style.width.%]="Math.min((k.refundRate?.value || 0) / (k.refundRate?.target || 1) * 100, 100)"></div></div>
-          <div class="kpi-target">الهدف: أقل من {{ k.refundRate?.target }}%</div>
+        <div class="realtime-divider"></div>
+        <div class="realtime-item">
+          <span class="realtime-label">متوسط الانتظار</span>
+          <span class="realtime-value warning">{{ rt.averageWaitTime || 0 }} د</span>
         </div>
       </div>
-    </div>
-  }
+    }
 
-  <!-- Financial Summary (from /statistics/financial-summary) -->
-  @if (financialSummary(); as fs) {
-    <h2 class="section-title" style="margin-top: var(--space-xxl);">الملخص المالي — هذا الشهر</h2>
+    <!-- === ROW 2: Overview Cards (from multiple real endpoints) === -->
     <div class="stats-grid">
+      <!-- From /orders/board -->
       <div class="stat-card">
-        <div class="stat-icon" style="background: rgba(56, 161, 105, 0.1);">💵</div>
+        <div class="stat-icon" style="background: rgba(252,93,1,0.1); color: #FC5D01;">📦</div>
         <div class="stat-content">
-          <div class="stat-label">إجمالي الإيرادات</div>
-          <div class="stat-value">{{ formatCurrency(fs.totalRevenue) }}</div>
+          <div class="stat-label">طلبات اليوم</div>
+          <div class="stat-value">{{ fmt(getTotalBoardOrders()) }}</div>
+          <div class="stat-sub">{{ orderBoard()?.pending?.count || 0 }} مستنية</div>
         </div>
       </div>
+
+      <!-- From /statistics/financial-summary -->
       <div class="stat-card">
-        <div class="stat-icon" style="background: rgba(252, 93, 1, 0.1);">📊</div>
+        <div class="stat-icon" style="background: rgba(56,161,105,0.1); color: #38A169;">💰</div>
         <div class="stat-content">
-          <div class="stat-label">العمولات</div>
-          <div class="stat-value">{{ formatCurrency(fs.totalCommissions) }}</div>
+          <div class="stat-label">إيرادات الشهر</div>
+          <div class="stat-value">{{ money(financialSummary()?.totalRevenue) }}</div>
+          <div class="stat-sub">صافي: {{ money(financialSummary()?.netProfit) }}</div>
         </div>
       </div>
+
+      <!-- From /drivers count -->
       <div class="stat-card">
-        <div class="stat-icon" style="background: rgba(49, 130, 206, 0.1);">🚚</div>
+        <div class="stat-icon" style="background: rgba(49,130,206,0.1); color: #3182CE;">🚗</div>
         <div class="stat-content">
-          <div class="stat-label">رسوم التوصيل</div>
-          <div class="stat-value">{{ formatCurrency(fs.totalDeliveryFees) }}</div>
+          <div class="stat-label">السائقين</div>
+          <div class="stat-value">{{ fmt(driversCount()) }}</div>
+          <div class="stat-sub">{{ realtime()?.onlineDrivers || 0 }} أونلاين</div>
         </div>
       </div>
+
+      <!-- From /customers count -->
       <div class="stat-card">
-        <div class="stat-icon" style="background: rgba(56, 161, 105, 0.1);">💎</div>
+        <div class="stat-icon" style="background: rgba(128,90,213,0.1); color: #805AD5;">👥</div>
         <div class="stat-content">
-          <div class="stat-label">صافي الربح</div>
-          <div class="stat-value" style="color: var(--success);">{{ formatCurrency(fs.netProfit) }}</div>
+          <div class="stat-label">العملاء</div>
+          <div class="stat-value">{{ fmt(customersCount()) }}</div>
+          <div class="stat-sub">{{ fmt(partnersCount()) }} شريك</div>
         </div>
       </div>
     </div>
-    <div class="grid-3" style="margin-top: var(--space-lg);">
-      <div class="card" style="text-align: center;">
-        <div style="font-size: 13px; color: var(--text-caption);">الاشتراكات</div>
-        <div style="font-size: 22px; font-weight: 700; color: var(--primary);">{{ formatCurrency(fs.subscriptionRevenue) }}</div>
-      </div>
-      <div class="card" style="text-align: center;">
-        <div style="font-size: 13px; color: var(--text-caption);">المستحقات</div>
-        <div style="font-size: 22px; font-weight: 700; color: var(--warning);">{{ formatCurrency(fs.outstandingPayables) }}</div>
-      </div>
-      <div class="card" style="text-align: center;">
-        <div style="font-size: 13px; color: var(--text-caption);">الاستردادات</div>
-        <div style="font-size: 22px; font-weight: 700; color: var(--error);">{{ formatCurrency(fs.totalRefunds) }}</div>
-      </div>
-    </div>
-  }
 
-  <!-- Bottom Row: Recent Orders + Top Drivers + Region Stats -->
-  <div class="grid-3" style="margin-top: var(--space-xxl);">
-
-    <!-- Recent Orders (from /orders) -->
-    <div class="card" style="grid-column: span 2;">
-      <h4 style="margin-bottom: var(--space-lg);">آخر الطلبات</h4>
-      @if (recentOrders().length) {
-        <div class="table-container" style="border: none; box-shadow: none;">
-          <table>
-            <thead><tr><th>رقم الطلب</th><th>العميل</th><th>السائق</th><th>المبلغ</th><th>الحالة</th></tr></thead>
-            <tbody>
-              @for (order of recentOrders(); track order.id) {
-                <tr>
-                  <td style="font-weight: 600; color: var(--primary);">{{ order.orderNumber }}</td>
-                  <td>{{ order.customerName || '—' }}</td>
-                  <td>{{ order.driverName || 'غير معيّن' }}</td>
-                  <td style="font-weight: 600;">{{ order.totalAmount }} ج.م</td>
-                  <td><span class="badge" [ngClass]="getOrderStatusBadge(order.status)">{{ order.statusName || getOrderStatusName(order.status) }}</span></td>
-                </tr>
-              }
-            </tbody>
-          </table>
+    <!-- === ROW 3: Charts (Revenue from API + Order Board from API) === -->
+    <div class="charts-row">
+      <!-- Revenue Line Chart (from /statistics/revenue) -->
+      <div class="card chart-card">
+        <div class="card-header">
+          <h3>الإيرادات اليومية</h3>
+          <span class="badge badge-info">هذا الشهر</span>
         </div>
-      } @else {
-        <p style="color: var(--text-caption);">مفيش طلبات</p>
-      }
+        @if (revenueChartData.labels?.length) {
+          <div class="chart-container">
+            <canvas baseChart [data]="revenueChartData" [options]="revenueChartOptions" type="line"></canvas>
+          </div>
+        } @else {
+          <div class="empty-state" style="padding: 40px;"><p style="color: var(--text-caption);">مفيش بيانات إيرادات لهذا الشهر</p></div>
+        }
+      </div>
+
+      <!-- Order Board Doughnut (from /orders/board) -->
+      <div class="card chart-card chart-card-sm">
+        <div class="card-header">
+          <h3>حالات الطلبات</h3>
+          <span class="badge badge-pending">{{ getTotalBoardOrders() }} طلب</span>
+        </div>
+        @if (orderBoardChartData.labels?.length) {
+          <div class="chart-container">
+            <canvas baseChart [data]="orderBoardChartData" [options]="orderBoardChartOptions" type="doughnut"></canvas>
+          </div>
+        } @else {
+          <div class="empty-state" style="padding: 40px;"><p style="color: var(--text-caption);">مفيش طلبات اليوم</p></div>
+        }
+      </div>
     </div>
 
-    <!-- Top Drivers (from /statistics/driver-performance) -->
-    <div class="card">
-      <h4 style="margin-bottom: var(--space-lg);">أفضل السائقين</h4>
-      @if (topDrivers().length) {
-        @for (driver of topDrivers(); track driver.driverId; let i = $index) {
-          <div style="display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border);">
-            <span style="font-size: 16px; font-weight: 700; color: var(--primary); width: 24px;">{{ i + 1 }}</span>
-            <div class="avatar avatar-sm">{{ driver.driverName?.charAt(0) }}</div>
-            <div style="flex: 1; min-width: 0;">
-              <div style="font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ driver.driverName }}</div>
-              <div style="font-size: 11px; color: var(--text-caption);">{{ driver.completedOrders }} طلب — ⭐ {{ driver.rating }}</div>
+    <!-- === ROW 4: Financial Summary (from /statistics/financial-summary) === -->
+    @if (financialSummary(); as fs) {
+      <h2 class="section-title" style="margin-top: var(--space-xxl);">الملخص المالي — هذا الشهر</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background: rgba(56,161,105,0.1);">💵</div>
+          <div class="stat-content">
+            <div class="stat-label">إجمالي الإيرادات</div>
+            <div class="stat-value">{{ money(fs.totalRevenue) }}</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: rgba(252,93,1,0.1);">📊</div>
+          <div class="stat-content">
+            <div class="stat-label">العمولات</div>
+            <div class="stat-value">{{ money(fs.totalCommissions) }}</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: rgba(49,130,206,0.1);">🚚</div>
+          <div class="stat-content">
+            <div class="stat-label">رسوم التوصيل</div>
+            <div class="stat-value">{{ money(fs.totalDeliveryFees) }}</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: rgba(56,161,105,0.1);">💎</div>
+          <div class="stat-content">
+            <div class="stat-label">صافي الربح</div>
+            <div class="stat-value" style="color: var(--success);">{{ money(fs.netProfit) }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="grid-3" style="margin-top: var(--space-lg);">
+        <div class="card" style="text-align: center;">
+          <div style="font-size: 13px; color: var(--text-caption);">الاشتراكات</div>
+          <div style="font-size: 22px; font-weight: 700; color: var(--primary);">{{ money(fs.subscriptionRevenue) }}</div>
+        </div>
+        <div class="card" style="text-align: center;">
+          <div style="font-size: 13px; color: var(--text-caption);">مستحقات معلقة</div>
+          <div style="font-size: 22px; font-weight: 700; color: var(--warning);">{{ money(fs.outstandingPayables) }}</div>
+        </div>
+        <div class="card" style="text-align: center;">
+          <div style="font-size: 13px; color: var(--text-caption);">الاستردادات</div>
+          <div style="font-size: 22px; font-weight: 700; color: var(--error);">{{ money(fs.totalRefunds) }}</div>
+        </div>
+      </div>
+    }
+
+    <!-- === ROW 5: Subscription & Wallet Stats === -->
+    <div class="grid-2" style="margin-top: var(--space-xxl);">
+      <!-- Subscription Stats (from /subscriptions/stats) -->
+      @if (subscriptionStats(); as ss) {
+        <div class="card" style="padding: var(--space-xl);">
+          <h3 style="margin-bottom: var(--space-lg);">الاشتراكات</h3>
+          <div class="grid-2" style="gap: 12px;">
+            <div style="text-align: center;">
+              <div style="font-size: 28px; font-weight: 700; color: var(--success);">{{ ss.totalActive || 0 }}</div>
+              <div style="font-size: 12px; color: var(--text-caption);">نشطة</div>
             </div>
-            <span style="font-weight: 700; font-size: 12px; color: var(--success);">{{ driver.onTimeRate }}%</span>
+            <div style="text-align: center;">
+              <div style="font-size: 28px; font-weight: 700; color: var(--error);">{{ ss.totalExpired || 0 }}</div>
+              <div style="font-size: 12px; color: var(--text-caption);">منتهية</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 28px; font-weight: 700; color: var(--primary);">{{ money(ss.monthlyRevenue) }}</div>
+              <div style="font-size: 12px; color: var(--text-caption);">إيراد شهري</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 28px; font-weight: 700; color: var(--info);">{{ ss.renewalRate || 0 }}%</div>
+              <div style="font-size: 12px; color: var(--text-caption);">معدل التجديد</div>
+            </div>
           </div>
-        }
-      } @else {
-        <p style="color: var(--text-caption);">مفيش بيانات</p>
+        </div>
+      }
+
+      <!-- Wallet Stats (from /wallets/stats) -->
+      @if (walletStats(); as ws) {
+        <div class="card" style="padding: var(--space-xl);">
+          <h3 style="margin-bottom: var(--space-lg);">المحافظ</h3>
+          <div class="grid-2" style="gap: 12px;">
+            <div style="text-align: center;">
+              <div style="font-size: 28px; font-weight: 700; color: var(--success);">{{ money(ws.totalBalance) }}</div>
+              <div style="font-size: 12px; color: var(--text-caption);">إجمالي الأرصدة</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 28px; font-weight: 700;">{{ ws.totalWallets || 0 }}</div>
+              <div style="font-size: 12px; color: var(--text-caption);">محفظة</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 28px; font-weight: 700; color: var(--error);">{{ ws.frozenWalletsCount || 0 }}</div>
+              <div style="font-size: 12px; color: var(--text-caption);">مجمدة</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 28px; font-weight: 700; color: var(--primary);">{{ ws.todayTransactions?.count || 0 }}</div>
+              <div style="font-size: 12px; color: var(--text-caption);">معاملات اليوم</div>
+            </div>
+          </div>
+        </div>
       }
     </div>
-  </div>
 
-  <!-- Region Stats (from /statistics/regions) -->
-  @if (regionStats().length) {
-    <h2 class="section-title" style="margin-top: var(--space-xxl);">أداء المناطق</h2>
-    <div class="table-container">
-      <table>
-        <thead><tr><th>المنطقة</th><th>الطلبات</th><th>الإيرادات</th><th>السائقين</th><th>العملاء</th><th>متوسط التوصيل</th><th>معدل الإتمام</th></tr></thead>
-        <tbody>
-          @for (r of regionStats(); track r.regionId) {
-            <tr>
-              <td style="font-weight: 600;">{{ r.regionName }}</td>
-              <td>{{ r.totalOrders?.toLocaleString() }}</td>
-              <td style="font-weight: 600; color: var(--success);">{{ r.revenue?.toLocaleString() }} ج.م</td>
-              <td>{{ r.activeDrivers }}</td>
-              <td>{{ r.activeCustomers?.toLocaleString() }}</td>
-              <td>{{ r.averageDeliveryTime }} دقيقة</td>
-              <td>
-                <span class="badge" [ngClass]="r.completionRate >= 95 ? 'badge-success' : r.completionRate >= 90 ? 'badge-warning' : 'badge-error'">
-                  {{ r.completionRate }}%
-                </span>
-              </td>
-            </tr>
+    <!-- === ROW 6: Disputes & Refunds Stats === -->
+    <div class="grid-2" style="margin-top: var(--space-lg);">
+      @if (disputeStats(); as ds) {
+        <div class="card" style="padding: var(--space-xl);">
+          <h3 style="margin-bottom: var(--space-lg);">النزاعات</h3>
+          <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+            <div style="text-align: center; flex: 1;">
+              <div style="font-size: 24px; font-weight: 700; color: var(--warning);">{{ ds.totalOpen || 0 }}</div>
+              <div style="font-size: 12px; color: var(--text-caption);">مفتوحة</div>
+            </div>
+            <div style="text-align: center; flex: 1;">
+              <div style="font-size: 24px; font-weight: 700; color: var(--primary);">{{ ds.totalInProgress || 0 }}</div>
+              <div style="font-size: 12px; color: var(--text-caption);">قيد المعالجة</div>
+            </div>
+            <div style="text-align: center; flex: 1;">
+              <div style="font-size: 24px; font-weight: 700; color: var(--success);">{{ ds.totalResolved || 0 }}</div>
+              <div style="font-size: 12px; color: var(--text-caption);">محلولة</div>
+            </div>
+            <div style="text-align: center; flex: 1;">
+              <div style="font-size: 24px; font-weight: 700; color: var(--error);">{{ ds.totalEscalated || 0 }}</div>
+              <div style="font-size: 12px; color: var(--text-caption);">مُصعّدة</div>
+            </div>
+          </div>
+        </div>
+      }
+      @if (refundStats(); as rs) {
+        <div class="card" style="padding: var(--space-xl);">
+          <h3 style="margin-bottom: var(--space-lg);">الاستردادات</h3>
+          <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+            <div style="text-align: center; flex: 1;">
+              <div style="font-size: 24px; font-weight: 700; color: var(--warning);">{{ rs.totalPending || 0 }}</div>
+              <div style="font-size: 12px; color: var(--text-caption);">قيد الانتظار</div>
+            </div>
+            <div style="text-align: center; flex: 1;">
+              <div style="font-size: 24px; font-weight: 700; color: var(--success);">{{ rs.totalProcessed || 0 }}</div>
+              <div style="font-size: 12px; color: var(--text-caption);">تم التنفيذ</div>
+            </div>
+            <div style="text-align: center; flex: 1;">
+              <div style="font-size: 24px; font-weight: 700; color: var(--error);">{{ money(rs.totalRefundedAmount) }}</div>
+              <div style="font-size: 12px; color: var(--text-caption);">إجمالي المسترد</div>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- === ROW 7: Recent Orders (from /orders) === -->
+    <h2 class="section-title" style="margin-top: var(--space-xxl);">آخر الطلبات</h2>
+    @if (recentOrders().length) {
+      <div class="table-container">
+        <table>
+          <thead><tr><th>رقم الطلب</th><th>العميل</th><th>السائق</th><th>الشريك</th><th>المبلغ</th><th>رسوم التوصيل</th><th>الحالة</th><th>التاريخ</th></tr></thead>
+          <tbody>
+            @for (o of recentOrders(); track o.id) {
+              <tr>
+                <td style="font-weight: 600; color: var(--primary);">{{ o.orderNumber }}</td>
+                <td>{{ o.customerName || '—' }}</td>
+                <td>{{ o.driverName || 'غير معيّن' }}</td>
+                <td>{{ o.partnerName || '—' }}</td>
+                <td style="font-weight: 600;">{{ o.totalAmount || 0 }} ج.م</td>
+                <td>{{ o.deliveryFee || 0 }} ج.م</td>
+                <td><span class="badge" [ngClass]="getStatusBadge(o.status)">{{ o.statusName || getStatusName(o.status) }}</span></td>
+                <td style="font-size: 12px;">{{ o.createdAt | date:'MM/dd HH:mm' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <div class="card" style="text-align: center; padding: 40px; color: var(--text-caption);">مفيش طلبات</div>
+    }
+
+    <!-- === ROW 8: Region Stats (from /statistics/regions) === -->
+    @if (regionStats().length) {
+      <h2 class="section-title" style="margin-top: var(--space-xxl);">أداء المناطق</h2>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>المنطقة</th><th>الطلبات</th><th>الإيرادات</th><th>السائقين</th><th>العملاء</th><th>متوسط التوصيل</th><th>معدل الإتمام</th></tr></thead>
+          <tbody>
+            @for (r of regionStats(); track r.regionId) {
+              <tr>
+                <td style="font-weight: 600;">{{ r.regionName }}</td>
+                <td>{{ r.totalOrders?.toLocaleString() }}</td>
+                <td style="font-weight: 600; color: var(--success);">{{ r.revenue?.toLocaleString() }} ج.م</td>
+                <td>{{ r.activeDrivers }}</td>
+                <td>{{ r.activeCustomers?.toLocaleString() }}</td>
+                <td>{{ r.averageDeliveryTime }} دقيقة</td>
+                <td><span class="badge" [ngClass]="(r.completionRate || 0) >= 95 ? 'badge-success' : (r.completionRate || 0) >= 90 ? 'badge-warning' : 'badge-error'">{{ r.completionRate }}%</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- === ROW 9: Vehicle & Growth Stats === -->
+    <div class="grid-2" style="margin-top: var(--space-xxl);">
+      @if (vehicleStats(); as vs) {
+        <div class="card" style="padding: var(--space-xl);">
+          <h3 style="margin-bottom: var(--space-lg);">الأسطول</h3>
+          <div class="grid-2" style="gap: 12px;">
+            <div style="text-align: center;">
+              <div style="font-size: 28px; font-weight: 700;">{{ vs.totalVehicles || 0 }}</div>
+              <div style="font-size: 12px; color: var(--text-caption);">إجمالي المركبات</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 28px; font-weight: 700; color: var(--success);">{{ vs.activeVehicles || 0 }}</div>
+              <div style="font-size: 12px; color: var(--text-caption);">نشطة</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 28px; font-weight: 700; color: var(--warning);">{{ vs.inspectionsDue || 0 }}</div>
+              <div style="font-size: 12px; color: var(--text-caption);">فحص مستحق</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 28px; font-weight: 700; color: var(--error);">{{ vs.failedInspections || 0 }}</div>
+              <div style="font-size: 12px; color: var(--text-caption);">فحص فاشل</div>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (growth(); as g) {
+        <div class="card" style="padding: var(--space-xl);">
+          <h3 style="margin-bottom: var(--space-lg);">معدلات النمو</h3>
+          @if (g.overallGrowthRate) {
+            <div class="grid-2" style="gap: 12px;">
+              <div style="text-align: center;">
+                <div style="font-size: 28px; font-weight: 700;" [style.color]="(g.overallGrowthRate.drivers || 0) >= 0 ? 'var(--success)' : 'var(--error)'">
+                  {{ g.overallGrowthRate.drivers >= 0 ? '+' : '' }}{{ g.overallGrowthRate.drivers || 0 }}%
+                </div>
+                <div style="font-size: 12px; color: var(--text-caption);">السائقين</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="font-size: 28px; font-weight: 700;" [style.color]="(g.overallGrowthRate.customers || 0) >= 0 ? 'var(--success)' : 'var(--error)'">
+                  {{ g.overallGrowthRate.customers >= 0 ? '+' : '' }}{{ g.overallGrowthRate.customers || 0 }}%
+                </div>
+                <div style="font-size: 12px; color: var(--text-caption);">العملاء</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="font-size: 28px; font-weight: 700;" [style.color]="(g.overallGrowthRate.orders || 0) >= 0 ? 'var(--success)' : 'var(--error)'">
+                  {{ g.overallGrowthRate.orders >= 0 ? '+' : '' }}{{ g.overallGrowthRate.orders || 0 }}%
+                </div>
+                <div style="font-size: 12px; color: var(--text-caption);">الطلبات</div>
+              </div>
+              <div style="text-align: center;">
+                <div style="font-size: 28px; font-weight: 700;" [style.color]="(g.overallGrowthRate.revenue || 0) >= 0 ? 'var(--success)' : 'var(--error)'">
+                  {{ g.overallGrowthRate.revenue >= 0 ? '+' : '' }}{{ g.overallGrowthRate.revenue || 0 }}%
+                </div>
+                <div style="font-size: 12px; color: var(--text-caption);">الإيرادات</div>
+              </div>
+            </div>
           }
-        </tbody>
-      </table>
-    </div>
-  }
-
-  <!-- Quick Stats (from /statistics/dashboard) -->
-  <div class="grid-3" style="margin-top: var(--space-xl);">
-    <div class="card">
-      <h4 style="margin-bottom: var(--space-lg);">مستخدمين جدد اليوم</h4>
-      <div style="font-size: 32px; font-weight: 700; color: var(--text-headline);">
-        {{ dashboard()?.todayNewUsers || 0 }}
-      </div>
-      @if (dashboard()?.comparedToYesterday?.newUsers; as change) {
-        <p style="font-size: 13px; margin-top: 4px;" [style.color]="change >= 0 ? 'var(--success)' : 'var(--error)'">
-          {{ change > 0 ? '↑' : '↓' }} {{ change > 0 ? change : -change }}% من أمبارح
-        </p>
+        </div>
       }
-    </div>
-
-    <div class="card">
-      <h4 style="margin-bottom: var(--space-lg);">طلبات مستنية</h4>
-      <div style="font-size: 32px; font-weight: 700; color: var(--warning);">
-        {{ dashboard()?.pendingOrders || 0 }}
-      </div>
-      <p style="font-size: 13px; color: var(--text-caption); margin-top: 4px;">محتاجة تعيين سائق</p>
-    </div>
-
-    <div class="card">
-      <h4 style="margin-bottom: var(--space-lg);">عملاء نشطين</h4>
-      <div style="font-size: 32px; font-weight: 700; color: var(--success);">
-        {{ formatNumber(dashboard()?.activeCustomers) }}
-      </div>
-      <p style="font-size: 13px; color: var(--text-caption); margin-top: 4px;">إجمالي العملاء المسجلين</p>
-    </div>
-  </div>
-
-  <!-- Platform Health (from /statistics/platform-health) -->
-  @if (platformHealth(); as ph) {
-    <h2 class="section-title" style="margin-top: var(--space-xxl);">صحة المنصة</h2>
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon" style="background: rgba(56, 161, 105, 0.1);">🟢</div>
-        <div class="stat-content">
-          <div class="stat-label">Uptime</div>
-          <div class="stat-value">{{ ph.systemUptime }}%</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background: rgba(49, 130, 206, 0.1);">⚡</div>
-        <div class="stat-content">
-          <div class="stat-label">API Response</div>
-          <div class="stat-value">{{ ph.apiResponseTime }}ms</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background: rgba(229, 62, 62, 0.1);">🐛</div>
-        <div class="stat-content">
-          <div class="stat-label">Error Rate</div>
-          <div class="stat-value">{{ ph.errorRate }}%</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background: rgba(128, 90, 213, 0.1);">🔗</div>
-        <div class="stat-content">
-          <div class="stat-label">Active Connections</div>
-          <div class="stat-value">{{ ph.activeConnections }}</div>
-        </div>
-      </div>
     </div>
   }
 </div>

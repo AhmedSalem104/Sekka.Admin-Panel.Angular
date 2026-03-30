@@ -1,0 +1,243 @@
+<div class="page-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h1>لوحة التحكم</h1>
+      <p class="page-subtitle">نظرة عامة على أداء سِكّة اليوم</p>
+    </div>
+    <div class="header-actions-row">
+      <div class="live-indicator">
+        <span class="live-dot"></span>
+        مباشر
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Stats Cards -->
+  <div class="stats-grid">
+    <!-- Today Orders -->
+    <div class="stat-card">
+      <div class="stat-icon" style="background: rgba(252, 93, 1, 0.1); color: #FC5D01;">📦</div>
+      <div class="stat-content">
+        <div class="stat-label">طلبات اليوم</div>
+        <div class="stat-value">{{ formatNumber(dashboard()?.todayOrders) }}</div>
+        @if (dashboard()?.comparedToYesterday?.orders; as change) {
+          <div class="stat-change" [class.positive]="change > 0" [class.negative]="change < 0">
+            {{ change > 0 ? '↑' : '↓' }} {{ change > 0 ? change : -change }}%
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Today Revenue -->
+    <div class="stat-card">
+      <div class="stat-icon" style="background: rgba(56, 161, 105, 0.1); color: #38A169;">💰</div>
+      <div class="stat-content">
+        <div class="stat-label">إيرادات اليوم</div>
+        <div class="stat-value">{{ formatCurrency(dashboard()?.todayRevenue) }}</div>
+        @if (dashboard()?.comparedToYesterday?.revenue; as change) {
+          <div class="stat-change" [class.positive]="change > 0" [class.negative]="change < 0">
+            {{ change > 0 ? '↑' : '↓' }} {{ change > 0 ? change : -change }}%
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Active Drivers -->
+    <div class="stat-card">
+      <div class="stat-icon" style="background: rgba(49, 130, 206, 0.1); color: #3182CE;">🚗</div>
+      <div class="stat-content">
+        <div class="stat-label">سائقين أونلاين</div>
+        <div class="stat-value">{{ formatNumber(dashboard()?.onlineDrivers) }}</div>
+        <div class="stat-sub">من {{ formatNumber(dashboard()?.activeDrivers) }} نشط</div>
+      </div>
+    </div>
+
+    <!-- Completion Rate -->
+    <div class="stat-card">
+      <div class="stat-icon" style="background: rgba(128, 90, 213, 0.1); color: #805AD5;">✅</div>
+      <div class="stat-content">
+        <div class="stat-label">معدل الإتمام</div>
+        <div class="stat-value">{{ dashboard()?.orderCompletionRate || 0 }}%</div>
+        <div class="stat-sub">متوسط التوصيل: {{ dashboard()?.averageDeliveryTime || 0 }} دقيقة</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Real-Time Strip -->
+  @if (realtime()) {
+    <div class="realtime-strip">
+      <div class="realtime-item">
+        <span class="realtime-label">طلبات نشطة</span>
+        <span class="realtime-value primary">{{ realtime().activeOrders }}</span>
+      </div>
+      <div class="realtime-divider"></div>
+      <div class="realtime-item">
+        <span class="realtime-label">مستنية</span>
+        <span class="realtime-value warning">{{ realtime().pendingOrders }}</span>
+      </div>
+      <div class="realtime-divider"></div>
+      <div class="realtime-item">
+        <span class="realtime-label">في السكة</span>
+        <span class="realtime-value info">{{ realtime().inTransitOrders }}</span>
+      </div>
+      <div class="realtime-divider"></div>
+      <div class="realtime-item">
+        <span class="realtime-label">سائقين فاضيين</span>
+        <span class="realtime-value success">{{ realtime().availableDrivers }}</span>
+      </div>
+      <div class="realtime-divider"></div>
+      <div class="realtime-item">
+        <span class="realtime-label">طلبات/دقيقة</span>
+        <span class="realtime-value">{{ realtime().ordersPerMinute }}</span>
+      </div>
+    </div>
+  }
+
+  <!-- Charts Row -->
+  <div class="charts-row">
+    <!-- Revenue Chart -->
+    <div class="card chart-card">
+      <div class="card-header">
+        <h3>الإيرادات اليومية</h3>
+        <span class="badge badge-info">هذا الشهر</span>
+      </div>
+      <div class="chart-container">
+        <canvas baseChart
+                [data]="revenueChartData"
+                [options]="revenueChartOptions"
+                type="line">
+        </canvas>
+      </div>
+    </div>
+
+    <!-- Order Status Chart -->
+    <div class="card chart-card chart-card-sm">
+      <div class="card-header">
+        <h3>حالات الطلبات</h3>
+      </div>
+      <div class="chart-container">
+        <canvas baseChart
+                [data]="orderStatusChartData"
+                [options]="orderStatusChartOptions"
+                type="doughnut">
+        </canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  @if (kpi()) {
+    <div class="kpi-section">
+      <h2 class="section-title">مؤشرات الأداء الرئيسية</h2>
+      <div class="kpi-grid">
+        <!-- Order Completion -->
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-label">معدل إتمام الطلبات</span>
+            <span class="kpi-trend" [class.positive]="kpi().orderCompletionRate?.trend > 0"
+                  [class.negative]="kpi().orderCompletionRate?.trend < 0">
+              {{ kpi().orderCompletionRate?.trend > 0 ? '↑' : '↓' }}
+              {{ kpi().orderCompletionRate?.trend }}%
+            </span>
+          </div>
+          <div class="kpi-value">{{ kpi().orderCompletionRate?.value }}%</div>
+          <div class="kpi-bar">
+            <div class="kpi-bar-fill success" [style.width.%]="kpi().orderCompletionRate?.value"></div>
+          </div>
+          <div class="kpi-target">الهدف: {{ kpi().orderCompletionRate?.target }}%</div>
+        </div>
+
+        <!-- Avg Delivery Time -->
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-label">متوسط وقت التوصيل</span>
+            <span class="kpi-trend" [class.positive]="kpi().averageDeliveryTime?.trend < 0"
+                  [class.negative]="kpi().averageDeliveryTime?.trend > 0">
+              {{ kpi().averageDeliveryTime?.trend < 0 ? '↓' : '↑' }}
+              {{ kpi().averageDeliveryTime?.trend }} دقيقة
+            </span>
+          </div>
+          <div class="kpi-value">{{ kpi().averageDeliveryTime?.value }} <small>دقيقة</small></div>
+          <div class="kpi-bar">
+            <div class="kpi-bar-fill info"
+                 [style.width.%]="(1 - kpi().averageDeliveryTime?.value / 60) * 100"></div>
+          </div>
+          <div class="kpi-target">الهدف: {{ kpi().averageDeliveryTime?.target }} دقيقة</div>
+        </div>
+
+        <!-- Customer Satisfaction -->
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-label">رضا العملاء</span>
+            <span class="kpi-trend positive">
+              ↑ {{ kpi().customerSatisfaction?.trend }}
+            </span>
+          </div>
+          <div class="kpi-value">{{ kpi().customerSatisfaction?.value }} <small>/ 5</small></div>
+          <div class="kpi-bar">
+            <div class="kpi-bar-fill warning"
+                 [style.width.%]="kpi().customerSatisfaction?.value / 5 * 100"></div>
+          </div>
+          <div class="kpi-target">الهدف: {{ kpi().customerSatisfaction?.target }}</div>
+        </div>
+
+        <!-- Revenue Growth -->
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-label">نمو الإيرادات</span>
+            <span class="kpi-trend" [class.positive]="kpi().revenueGrowth?.trend > 0"
+                  [class.negative]="kpi().revenueGrowth?.trend < 0">
+              {{ kpi().revenueGrowth?.trend > 0 ? '↑' : '↓' }}
+              {{ kpi().revenueGrowth?.trend }}%
+            </span>
+          </div>
+          <div class="kpi-value">{{ kpi().revenueGrowth?.value }}%</div>
+          <div class="kpi-bar">
+            <div class="kpi-bar-fill primary"
+                 [style.width.%]="Math.min(kpi().revenueGrowth?.value / 25 * 100, 100)"></div>
+          </div>
+          <div class="kpi-target">الهدف: {{ kpi().revenueGrowth?.target }}%</div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Quick Stats Bottom Row -->
+  <div class="grid-3" style="margin-top: var(--space-xl);">
+    <!-- New Users Today -->
+    <div class="card">
+      <h4 style="margin-bottom: var(--space-lg);">مستخدمين جدد اليوم</h4>
+      <div style="font-size: 32px; font-weight: 700; color: var(--text-headline);">
+        {{ dashboard()?.todayNewUsers || 0 }}
+      </div>
+      <p style="font-size: 13px; color: var(--text-caption); margin-top: var(--space-xs);">
+        @if (dashboard()?.comparedToYesterday?.newUsers; as change) {
+          {{ change > 0 ? 'أكثر' : 'أقل' }} من أمبارح بـ {{ change > 0 ? change : -change }}%
+        }
+      </p>
+    </div>
+
+    <!-- Pending Orders -->
+    <div class="card">
+      <h4 style="margin-bottom: var(--space-lg);">طلبات مستنية</h4>
+      <div style="font-size: 32px; font-weight: 700; color: var(--warning);">
+        {{ dashboard()?.pendingOrders || 0 }}
+      </div>
+      <p style="font-size: 13px; color: var(--text-caption); margin-top: var(--space-xs);">
+        محتاجة تعيين سائق
+      </p>
+    </div>
+
+    <!-- Active Customers -->
+    <div class="card">
+      <h4 style="margin-bottom: var(--space-lg);">عملاء نشطين</h4>
+      <div style="font-size: 32px; font-weight: 700; color: var(--success);">
+        {{ formatNumber(dashboard()?.activeCustomers) }}
+      </div>
+      <p style="font-size: 13px; color: var(--text-caption); margin-top: var(--space-xs);">
+        إجمالي العملاء المسجلين
+      </p>
+    </div>
+  </div>
+</div>

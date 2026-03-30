@@ -1,0 +1,61 @@
+<header class="header">
+  <!-- Mobile Menu Toggle -->
+  <button class="menu-toggle" (click)="menuToggle.emit()">
+    ☰
+  </button>
+
+  <!-- Search -->
+  <div class="header-search hide-mobile">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="ابحث عن سائق، طلب، عميل..." />
+    </div>
+  </div>
+
+  <div class="header-spacer"></div>
+
+  <!-- Actions -->
+  <div class="header-actions">
+    <!-- Theme Toggle -->
+    <button class="action-btn" (click)="toggleTheme()" [title]="isDark() ? 'الوضع الفاتح' : 'الوضع المظلم'">
+      {{ isDark() ? '☀️' : '🌙' }}
+    </button>
+
+    <!-- Notifications -->
+    <button class="action-btn" title="الإشعارات">
+      🔔
+      <span class="notification-dot"></span>
+    </button>
+
+    <!-- SOS Alert -->
+    <button class="action-btn sos-btn" title="طوارئ SOS">
+      🆘
+    </button>
+
+    <!-- Profile -->
+    <div class="profile-wrapper">
+      <button class="profile-btn" (click)="toggleProfile()">
+        <div class="avatar">{{ adminName[0] }}</div>
+        <span class="profile-name hide-mobile">{{ adminName }}</span>
+        <span class="profile-arrow hide-mobile">▾</span>
+      </button>
+
+      @if (profileOpen()) {
+        <div class="profile-dropdown">
+          <div class="dropdown-header">
+            <div class="avatar avatar-lg">{{ adminName[0] }}</div>
+            <div>
+              <div class="dropdown-name">{{ adminName }}</div>
+              <div class="dropdown-role">مدير النظام</div>
+            </div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item" (click)="logout()">
+            <span>🚪</span>
+            تسجيل الخروج
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+</header>

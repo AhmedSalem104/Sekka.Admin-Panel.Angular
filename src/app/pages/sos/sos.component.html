@@ -1,0 +1,182 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>نداءات الطوارئ SOS</h1>
+    <span class="badge badge-error">{{ totalCount }} نداء</span>
+  </div>
+
+  <!-- Active Count Badges -->
+  @if (activeCount()) {
+    <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
+      <div style="background: var(--error-bg, #fef2f2); border: 1px solid var(--error, #ef4444); border-radius: 12px; padding: 12px 20px; text-align: center; min-width: 120px;">
+        <div style="font-size: 24px; font-weight: 700; color: var(--error, #ef4444);">{{ activeCount().critical || 0 }}</div>
+        <div style="font-size: 13px; color: var(--text-muted);">حرج</div>
+      </div>
+      <div style="background: var(--warning-bg, #fffbeb); border: 1px solid var(--warning, #f59e0b); border-radius: 12px; padding: 12px 20px; text-align: center; min-width: 120px;">
+        <div style="font-size: 24px; font-weight: 700; color: var(--warning, #f59e0b);">{{ activeCount().high || 0 }}</div>
+        <div style="font-size: 13px; color: var(--text-muted);">عالي</div>
+      </div>
+      <div style="background: var(--info-bg, #eff6ff); border: 1px solid var(--info, #3b82f6); border-radius: 12px; padding: 12px 20px; text-align: center; min-width: 120px;">
+        <div style="font-size: 24px; font-weight: 700; color: var(--info, #3b82f6);">{{ activeCount().medium || 0 }}</div>
+        <div style="font-size: 13px; color: var(--text-muted);">متوسط</div>
+      </div>
+      <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 20px; text-align: center; min-width: 120px;">
+        <div style="font-size: 24px; font-weight: 700; color: var(--text-headline);">{{ activeCount().low || 0 }}</div>
+        <div style="font-size: 13px; color: var(--text-muted);">منخفض</div>
+      </div>
+    </div>
+  }
+
+  <div class="filters-bar">
+    <div class="search-box" style="flex: 1; max-width: 400px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="ابحث..." [(ngModel)]="search" (keyup.enter)="onSearch()" />
+    </div>
+    <select class="form-control" style="width: 180px; height: 44px;" [(ngModel)]="statusFilter" (change)="onSearch()">
+      <option value="">كل الحالات</option>
+      <option value="Active">نشط</option>
+      <option value="Acknowledged">تم الاستلام</option>
+      <option value="Resolved">تم الحل</option>
+      <option value="Closed">مغلق</option>
+    </select>
+    <select class="form-control" style="width: 180px; height: 44px;" [(ngModel)]="priorityFilter" (change)="onSearch()">
+      <option value="">كل الأولويات</option>
+      <option value="Critical">حرج</option>
+      <option value="High">عالي</option>
+      <option value="Medium">متوسط</option>
+      <option value="Low">منخفض</option>
+    </select>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">🆘</div>
+      <h3>مفيش نداءات طوارئ</h3>
+      <p>مفيش نتائج للبحث ده</p>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>الرقم</th>
+            <th>النوع</th>
+            <th>الأولوية</th>
+            <th>الحالة</th>
+            <th>المُبلّغ</th>
+            <th>الطلب</th>
+            <th>الموقع</th>
+            <th>التاريخ</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr (click)="viewSos(item.id)" style="cursor: pointer;">
+              <td style="font-weight: 600; color: var(--primary);">#{{ item.id }}</td>
+              <td>{{ item.type || '—' }}</td>
+              <td><span class="badge" [ngClass]="getPriorityBadge(item.priority)">{{ getPriorityLabel(item.priority) }}</span></td>
+              <td><span class="badge" [ngClass]="getStatusBadge(item.status)">{{ item.status || '—' }}</span></td>
+              <td>{{ item.reporterName || '—' }}</td>
+              <td>{{ item.orderNumber ? '#' + item.orderNumber : '—' }}</td>
+              <td>{{ item.location || '—' }}</td>
+              <td>{{ item.createdAt | date:'yyyy/MM/dd HH:mm' }}</td>
+              <td (click)="$event.stopPropagation()">
+                <div style="display: flex; gap: 4px;">
+                  <button class="btn btn-sm btn-outline-warning" (click)="acknowledgeSos(item.id)">استلام</button>
+                  <button class="btn btn-sm btn-outline-success" (click)="resolveSos(item.id)">حل</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">‹</button>
+        @for (p of [].constructor(Math.min(totalPages, 10)); track $index) {
+          <button [class.active]="currentPage === $index + 1" (click)="onPageChange($index + 1)">{{ $index + 1 }}</button>
+        }
+        <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">›</button>
+      </div>
+    }
+  }
+</div>
+
+<!-- SOS Detail Modal -->
+@if (showDetail()) {
+  <div class="modal-overlay" (click)="showDetail.set(false)">
+    <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>تفاصيل نداء الطوارئ</h2>
+        <button class="modal-close" (click)="showDetail.set(false)">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 24px;">
+        @if (selectedSos(); as s) {
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+            <div><strong>الرقم:</strong> #{{ s.id }}</div>
+            <div><strong>النوع:</strong> {{ s.type || '—' }}</div>
+            <div><strong>الأولوية:</strong> <span class="badge" [ngClass]="getPriorityBadge(s.priority)">{{ getPriorityLabel(s.priority) }}</span></div>
+            <div><strong>الحالة:</strong> <span class="badge" [ngClass]="getStatusBadge(s.status)">{{ s.status }}</span></div>
+            <div><strong>المُبلّغ:</strong> {{ s.reporterName || '—' }}</div>
+            <div><strong>رقم الطلب:</strong> {{ s.orderNumber ? '#' + s.orderNumber : '—' }}</div>
+            <div><strong>الموقع:</strong> {{ s.location || '—' }}</div>
+            <div><strong>التاريخ:</strong> {{ s.createdAt | date:'yyyy/MM/dd HH:mm' }}</div>
+          </div>
+
+          @if (s.driverName || s.driverPhone) {
+            <h3 style="margin-bottom: 12px; color: var(--text-headline);">معلومات السائق</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; background: var(--bg-card); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+              <div><strong>اسم السائق:</strong> {{ s.driverName || '—' }}</div>
+              <div><strong>تليفون السائق:</strong> {{ s.driverPhone || '—' }}</div>
+              <div><strong>رقم اللوحة:</strong> {{ s.vehiclePlate || '—' }}</div>
+              <div><strong>نوع المركبة:</strong> {{ s.vehicleType || '—' }}</div>
+            </div>
+          }
+
+          @if (s.images?.length) {
+            <h3 style="margin-bottom: 12px; color: var(--text-headline);">الصور</h3>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px;">
+              @for (img of s.images; track $index) {
+                <a [href]="img.url || img" target="_blank">
+                  <img [src]="img.url || img" alt="صورة" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border);" />
+                </a>
+              }
+            </div>
+          }
+
+          @if (s.audioUrl) {
+            <h3 style="margin-bottom: 12px; color: var(--text-headline);">تسجيل صوتي</h3>
+            <div style="margin-bottom: 24px;">
+              <audio controls [src]="s.audioUrl" style="width: 100%;"></audio>
+            </div>
+          }
+
+          @if (s.actions?.length) {
+            <h3 style="margin-bottom: 12px; color: var(--text-headline);">الإجراءات المتخذة</h3>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px;">
+              @for (action of s.actions; track $index) {
+                <div style="background: var(--bg-card); padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <strong>{{ action.actionBy || 'مجهول' }}</strong>
+                    <span style="font-size: 12px; color: var(--text-muted);">{{ action.createdAt | date:'yyyy/MM/dd HH:mm' }}</span>
+                  </div>
+                  <p style="margin: 0;">{{ action.description || action.action }}</p>
+                </div>
+              }
+            </div>
+          }
+
+          <div style="display: flex; gap: 8px; justify-content: flex-end;">
+            <button class="btn btn-warning" (click)="acknowledgeSos(s.id)">استلام</button>
+            <button class="btn btn-success" (click)="resolveSos(s.id)">حل</button>
+            <button class="btn btn-secondary" (click)="showDetail.set(false)">إغلاق</button>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

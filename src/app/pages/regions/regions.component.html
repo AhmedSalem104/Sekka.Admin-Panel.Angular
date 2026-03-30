@@ -1,0 +1,107 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>المناطق</h1>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span class="badge badge-info">{{ totalCount }} منطقة</span>
+      <button class="btn btn-primary" (click)="showCreate.set(true)">+ إضافة منطقة</button>
+    </div>
+  </div>
+
+  <div class="filters-bar">
+    <div class="search-box" style="flex: 1; max-width: 400px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="ابحث بالاسم..." [(ngModel)]="search" (keyup.enter)="onSearch()" />
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">📍</div>
+      <h3>مفيش مناطق</h3>
+      <p>مفيش نتائج للبحث ده</p>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>المنطقة</th>
+            <th>الاسم بالإنجليزي</th>
+            <th>عدد السائقين</th>
+            <th>عدد الطلبات</th>
+            <th>معامل الرسوم</th>
+            <th>نشط</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr>
+              <td style="font-weight: 600; color: var(--text-headline);">{{ item.name || '—' }}</td>
+              <td>{{ item.nameEn || '—' }}</td>
+              <td style="font-weight: 600;">{{ item.driversCount || 0 }}</td>
+              <td style="font-weight: 600;">{{ item.ordersCount || 0 }}</td>
+              <td>
+                <span class="badge" [ngClass]="(item.deliveryFeeMultiplier || item.feeMultiplier || 1) > 1 ? 'badge-warning' : 'badge-success'">
+                  x{{ (item.deliveryFeeMultiplier || item.feeMultiplier || 1).toFixed(1) }}
+                </span>
+              </td>
+              <td>
+                <span class="badge" [ngClass]="item.isActive ? 'badge-active' : 'badge-inactive'">
+                  {{ item.isActive ? 'نشط' : 'غير نشط' }}
+                </span>
+              </td>
+              <td>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                  <button class="btn btn-sm btn-danger" (click)="deleteRegion(item.id)">حذف</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">‹</button>
+        @for (p of [].constructor(Math.min(totalPages, 10)); track $index) {
+          <button [class.active]="currentPage === $index + 1" (click)="onPageChange($index + 1)">{{ $index + 1 }}</button>
+        }
+        <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">›</button>
+      </div>
+    }
+  }
+
+  <!-- Create Modal -->
+  @if (showCreate()) {
+    <div class="modal-overlay" (click)="showCreate.set(false)">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>إضافة منطقة جديدة</h2>
+          <button class="modal-close" (click)="showCreate.set(false)">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>الاسم بالعربي</label>
+            <input type="text" class="form-control" [(ngModel)]="newRegion.name" placeholder="اسم المنطقة" />
+          </div>
+          <div class="form-group">
+            <label>الاسم بالإنجليزي</label>
+            <input type="text" class="form-control" [(ngModel)]="newRegion.nameEn" placeholder="Region name" dir="ltr" />
+          </div>
+          <div class="form-group">
+            <label>معامل رسوم التوصيل</label>
+            <input type="number" class="form-control" [(ngModel)]="newRegion.deliveryFeeMultiplier" min="0" step="0.1" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="showCreate.set(false)">إلغاء</button>
+          <button class="btn btn-primary" (click)="createRegion()" [disabled]="!newRegion.name">إضافة</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

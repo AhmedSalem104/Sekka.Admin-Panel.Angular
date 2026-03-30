@@ -1,0 +1,214 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>حلقات التوفير (الجمعيات)</h1>
+    <span class="badge badge-info">{{ totalCount }} حلقة</span>
+  </div>
+
+  <!-- Stats Cards -->
+  @if (stats()) {
+    <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+      <div class="stat-card">
+        <div class="stat-label">إجمالي الدوائر</div>
+        <div class="stat-value">{{ stats().totalCircles || 0 }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">نشطة</div>
+        <div class="stat-value" style="color: var(--success);">{{ stats().activeCircles || 0 }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">مكتملة</div>
+        <div class="stat-value">{{ stats().completedCircles || 0 }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">إجمالي المجمع</div>
+        <div class="stat-value" style="color: var(--primary);">{{ (stats().totalPooled || 0) | number:'1.2-2' }} ج.م</div>
+      </div>
+    </div>
+  }
+
+  <div class="filters-bar">
+    <div class="search-box" style="flex: 1; max-width: 400px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="ابحث بالاسم..." [(ngModel)]="search" (keyup.enter)="onSearch()" />
+    </div>
+    <select class="form-control" style="width: 180px; height: 44px;" [(ngModel)]="statusFilter" (change)="onSearch()">
+      <option value="">كل الحالات</option>
+      <option value="0">قيد الانتظار</option>
+      <option value="1">نشطة</option>
+      <option value="2">معلّقة</option>
+      <option value="3">مكتملة</option>
+      <option value="4">مغلقة</option>
+    </select>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">🤝</div>
+      <h3>مفيش حلقات توفير</h3>
+      <p>مفيش نتائج للبحث ده</p>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>الدائرة</th>
+            <th>الأعضاء</th>
+            <th>المبلغ/دورة</th>
+            <th>الدورة الحالية</th>
+            <th>الحالة</th>
+            <th>القادم</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr>
+              <td style="font-weight: 600; color: var(--text-headline);">{{ item.name || '—' }}</td>
+              <td style="font-weight: 600;">{{ item.membersCount || 0 }}</td>
+              <td style="font-weight: 600;">{{ (item.amountPerCycle || item.poolAmount || 0) | number:'1.2-2' }} ج.م</td>
+              <td>{{ item.currentRound || item.currentCycle || 0 }}/{{ item.totalRounds || item.totalCycles || 0 }}</td>
+              <td>
+                <span class="badge" [ngClass]="getStatusBadge(item.status)">{{ getStatusLabel(item.status) }}</span>
+              </td>
+              <td>{{ item.nextPayoutDate ? (item.nextPayoutDate | date:'yyyy/MM/dd') : '—' }}</td>
+              <td>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                  <button class="btn btn-sm btn-outline" (click)="viewCircle(item.id)">عرض</button>
+                  @if (item.status === 1) {
+                    <button class="btn btn-sm btn-warning" (click)="suspendCircle(item.id)">تعليق</button>
+                  }
+                  @if (item.status === 2) {
+                    <button class="btn btn-sm btn-success" (click)="resumeCircle(item.id)">استئناف</button>
+                  }
+                  @if (item.status === 1 || item.status === 2) {
+                    <button class="btn btn-sm btn-danger" (click)="closeCircle(item.id)">إغلاق</button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">‹</button>
+        @for (p of [].constructor(Math.min(totalPages, 10)); track $index) {
+          <button [class.active]="currentPage === $index + 1" (click)="onPageChange($index + 1)">{{ $index + 1 }}</button>
+        }
+        <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">›</button>
+      </div>
+    }
+  }
+
+  <!-- Detail Modal -->
+  @if (showDetail() && selectedCircle()) {
+    <div class="modal-overlay" (click)="showDetail.set(false)">
+      <div class="modal-content" style="max-width: 700px;" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>{{ selectedCircle().name }}</h2>
+          <button class="modal-close" (click)="showDetail.set(false)">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-grid">
+            <div class="detail-item">
+              <span class="detail-label">الحالة</span>
+              <span class="badge" [ngClass]="getStatusBadge(selectedCircle().status)">{{ getStatusLabel(selectedCircle().status) }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">عدد الأعضاء</span>
+              <span class="detail-value">{{ selectedCircle().membersCount || 0 }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">المبلغ/دورة</span>
+              <span class="detail-value">{{ (selectedCircle().amountPerCycle || selectedCircle().poolAmount || 0) | number:'1.2-2' }} ج.م</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">الدورة</span>
+              <span class="detail-value">{{ selectedCircle().currentRound || selectedCircle().currentCycle || 0 }}/{{ selectedCircle().totalRounds || selectedCircle().totalCycles || 0 }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">الدفع القادم</span>
+              <span class="detail-value">{{ selectedCircle().nextPayoutDate ? (selectedCircle().nextPayoutDate | date:'yyyy/MM/dd') : '—' }}</span>
+            </div>
+          </div>
+
+          <!-- Members -->
+          @if (selectedCircle().members && selectedCircle().members.length > 0) {
+            <h3 style="margin-top: 20px; margin-bottom: 12px;">الأعضاء</h3>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>الاسم</th>
+                    <th>الترتيب</th>
+                    <th>المدفوع</th>
+                    <th>الحالة</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (m of selectedCircle().members; track m.id || $index) {
+                    <tr>
+                      <td style="font-weight: 600;">{{ m.name || m.userName || '—' }}</td>
+                      <td>{{ m.order || m.position || $index + 1 }}</td>
+                      <td>{{ (m.totalPaid || 0) | number:'1.2-2' }} ج.م</td>
+                      <td>
+                        <span class="badge" [ngClass]="m.hasPaid ? 'badge-active' : 'badge-inactive'">
+                          {{ m.hasPaid ? 'دفع' : 'لم يدفع' }}
+                        </span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          <!-- Payment History -->
+          @if (selectedCircle().paymentHistory && selectedCircle().paymentHistory.length > 0) {
+            <h3 style="margin-top: 20px; margin-bottom: 12px;">سجل المدفوعات</h3>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>التاريخ</th>
+                    <th>المستلم</th>
+                    <th>المبلغ</th>
+                    <th>الدورة</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of selectedCircle().paymentHistory; track p.id || $index) {
+                    <tr>
+                      <td>{{ p.date | date:'yyyy/MM/dd' }}</td>
+                      <td style="font-weight: 600;">{{ p.recipientName || '—' }}</td>
+                      <td style="font-weight: 700; color: var(--success);">{{ (p.amount || 0) | number:'1.2-2' }} ج.م</td>
+                      <td>{{ p.round || p.cycle || '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+        <div class="modal-footer">
+          @if (selectedCircle().status === 1) {
+            <button class="btn btn-warning" (click)="suspendCircle(selectedCircle().id)">تعليق</button>
+            <button class="btn btn-primary" (click)="forcePayout(selectedCircle().id)">دفع قسري</button>
+          }
+          @if (selectedCircle().status === 2) {
+            <button class="btn btn-success" (click)="resumeCircle(selectedCircle().id)">استئناف</button>
+          }
+          @if (selectedCircle().status === 1 || selectedCircle().status === 2) {
+            <button class="btn btn-danger" (click)="closeCircle(selectedCircle().id)">إغلاق</button>
+          }
+          <button class="btn btn-secondary" (click)="showDetail.set(false)">إغلاق النافذة</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

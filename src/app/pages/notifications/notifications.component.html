@@ -1,0 +1,87 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>الإشعارات</h1>
+    <button class="btn btn-primary" (click)="toggleSendForm()">+ إرسال إشعار</button>
+  </div>
+
+  @if (showSendForm) {
+    <div class="card" style="margin-bottom: var(--space-xl); padding: var(--space-xxl);">
+      <h3 style="margin-bottom: var(--space-lg);">إرسال إشعار جديد</h3>
+      <div class="form-group">
+        <label>العنوان</label>
+        <input type="text" class="form-control" [(ngModel)]="sendTitle" placeholder="عنوان الإشعار" />
+      </div>
+      <div class="form-group">
+        <label>المحتوى</label>
+        <textarea class="form-control" [(ngModel)]="sendBody" placeholder="محتوى الإشعار"></textarea>
+      </div>
+      <div class="form-group">
+        <label>الفئة المستهدفة</label>
+        <select class="form-control" [(ngModel)]="sendTarget">
+          <option value="all">الكل</option>
+          <option value="drivers">السائقين</option>
+          <option value="customers">العملاء</option>
+          <option value="partners">الشركاء</option>
+        </select>
+      </div>
+      <div style="display: flex; gap: var(--space-md);">
+        <button class="btn btn-primary" (click)="sendNotification()" [disabled]="sending() || !sendTitle || !sendBody">
+          {{ sending() ? 'جاري الإرسال...' : 'إرسال' }}
+        </button>
+        <button class="btn btn-secondary" (click)="toggleSendForm()">إلغاء</button>
+      </div>
+    </div>
+  }
+
+  <div class="filters-bar">
+    <div class="search-box" style="flex: 1; max-width: 400px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="ابحث..." [(ngModel)]="search" (keyup.enter)="onSearch()" />
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">🔔</div>
+      <h3>مفيش إشعارات</h3>
+      <p>مفيش نتائج للبحث ده</p>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>العنوان</th>
+            <th>المحتوى</th>
+            <th>الفئة المستهدفة</th>
+            <th>المستلمين</th>
+            <th>التاريخ</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr>
+              <td style="font-weight: 600; color: var(--text-headline);">{{ item.title || '—' }}</td>
+              <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ item.body || '—' }}</td>
+              <td><span class="badge badge-info">{{ item.target || '—' }}</span></td>
+              <td>{{ item.recipientCount || 0 }}</td>
+              <td>{{ item.createdAt | date:'yyyy/MM/dd HH:mm' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">‹</button>
+        @for (p of [].constructor(totalPages); track $index) {
+          <button [class.active]="currentPage === $index + 1" (click)="onPageChange($index + 1)">{{ $index + 1 }}</button>
+        }
+        <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">›</button>
+      </div>
+    }
+  }
+</div>

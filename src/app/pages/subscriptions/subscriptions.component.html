@@ -1,0 +1,197 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>الاشتراكات</h1>
+    <button class="btn btn-primary" (click)="showGift.set(true)">🎁 إهداء اشتراك</button>
+  </div>
+
+  <!-- Stats -->
+  @if (stats(); as s) {
+    <div class="stats-grid" style="margin-bottom: var(--space-xl);">
+      <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(56, 161, 105, 0.1);">✅</div>
+        <div class="stat-content">
+          <div class="stat-label">اشتراكات نشطة</div>
+          <div class="stat-value">{{ s.totalActive }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(252, 93, 1, 0.1);">💰</div>
+        <div class="stat-content">
+          <div class="stat-label">إيرادات شهرية</div>
+          <div class="stat-value">{{ s.monthlyRevenue?.toLocaleString() }} ج.م</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(49, 130, 206, 0.1);">🔄</div>
+        <div class="stat-content">
+          <div class="stat-label">معدل التجديد</div>
+          <div class="stat-value">{{ s.renewalRate }}%</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(229, 62, 62, 0.1);">⏰</div>
+        <div class="stat-content">
+          <div class="stat-label">منتهية</div>
+          <div class="stat-value">{{ s.totalExpired }}</div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <div class="filters-bar">
+    <div class="search-box" style="flex: 1; max-width: 400px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="ابحث بالاسم أو التليفون..." [(ngModel)]="search" (keyup.enter)="onSearch()" />
+    </div>
+    <select class="form-control" style="width: 160px; height: 44px;" [(ngModel)]="statusFilter" (change)="onSearch()">
+      <option value="">كل الحالات</option>
+      <option value="1">نشط</option>
+      <option value="2">منتهي</option>
+      <option value="3">ملغي</option>
+    </select>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">💎</div>
+      <h3>مفيش اشتراكات</h3>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>السائق</th>
+            <th>الخطة</th>
+            <th>الحالة</th>
+            <th>البداية</th>
+            <th>الانتهاء</th>
+            <th>المبلغ</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr style="cursor: pointer;" (click)="viewSubscription(item.id)">
+              <td>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div class="avatar avatar-sm">{{ item.driverName?.charAt(0) || 'س' }}</div>
+                  <div>
+                    <div style="font-weight: 600; color: var(--text-headline);">{{ item.driverName }}</div>
+                    <div style="font-size: 12px; color: var(--text-caption);" dir="ltr">{{ item.driverPhone }}</div>
+                  </div>
+                </div>
+              </td>
+              <td style="font-weight: 600;">{{ item.planName }}</td>
+              <td><span class="badge" [ngClass]="getStatusBadge(item.status)">{{ item.statusName }}</span></td>
+              <td>{{ item.startDate | date:'yyyy/MM/dd' }}</td>
+              <td>{{ item.endDate | date:'yyyy/MM/dd' }}</td>
+              <td style="font-weight: 600;">{{ item.amountPaid }} ج.م</td>
+              <td (click)="$event.stopPropagation()">
+                <div style="display: flex; gap: 4px;">
+                  @if (item.status === 1) {
+                    <button class="btn btn-sm btn-primary" (click)="openExtend(item.id)">تمديد</button>
+                    <button class="btn btn-sm btn-danger" (click)="cancelSubscription(item.id)">إلغاء</button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">‹</button>
+        @for (p of [].constructor(Math.min(totalPages, 10)); track $index) {
+          <button [class.active]="currentPage === $index + 1" (click)="onPageChange($index + 1)">{{ $index + 1 }}</button>
+        }
+        <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">›</button>
+      </div>
+    }
+  }
+</div>
+
+<!-- Subscription Detail Modal -->
+@if (showDetail()) {
+  <div class="modal-overlay" (click)="showDetail.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      @if (selectedSub(); as s) {
+        <h2 style="margin-bottom: 16px;">تفاصيل الاشتراك</h2>
+        <p><strong>السائق:</strong> {{ s.driverName }} ({{ s.driverPhone }})</p>
+        <p><strong>الخطة:</strong> {{ s.planName }} — {{ s.planPrice }} ج.م</p>
+        <p><strong>الحالة:</strong> <span class="badge" [ngClass]="getStatusBadge(s.status)">{{ s.statusName }}</span></p>
+        <p><strong>الفترة:</strong> {{ s.startDate | date:'yyyy/MM/dd' }} — {{ s.endDate | date:'yyyy/MM/dd' }}</p>
+        <p><strong>تجديد تلقائي:</strong> {{ s.autoRenew ? 'نعم' : 'لا' }}</p>
+        @if (s.renewalHistory?.length) {
+          <h4 style="margin: 12px 0 8px;">سجل التجديدات</h4>
+          @for (r of s.renewalHistory; track $index) {
+            <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);">
+              <span>{{ r.date | date:'yyyy/MM/dd' }}</span>
+              <span style="font-weight: 600;">{{ r.amount }} ج.م — {{ r.method }}</span>
+            </div>
+          }
+        }
+        <button class="btn btn-secondary" style="margin-top: 16px;" (click)="showDetail.set(false)">إغلاق</button>
+      } @else {
+        <div class="loading-spinner"><div class="spinner"></div></div>
+      }
+    </div>
+  </div>
+}
+
+<!-- Extend Modal -->
+@if (showExtend()) {
+  <div class="modal-overlay" (click)="showExtend.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h2 style="margin-bottom: 16px;">تمديد الاشتراك</h2>
+      <div class="form-group">
+        <label>عدد الأيام</label>
+        <input type="number" class="form-control" [(ngModel)]="extendDays" min="1" />
+      </div>
+      <div class="form-group">
+        <label>السبب</label>
+        <textarea class="form-control" [(ngModel)]="extendReason" placeholder="سبب التمديد..."></textarea>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-primary" (click)="submitExtend()" [disabled]="!extendReason">تمديد</button>
+        <button class="btn btn-secondary" (click)="showExtend.set(false)">إلغاء</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Gift Modal -->
+@if (showGift()) {
+  <div class="modal-overlay" (click)="showGift.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h2 style="margin-bottom: 16px;">🎁 إهداء اشتراك</h2>
+      <div class="form-group">
+        <label>ID السائق</label>
+        <input type="text" class="form-control" [(ngModel)]="giftDriverId" placeholder="driver-guid..." />
+      </div>
+      <div class="form-group">
+        <label>الخطة</label>
+        <select class="form-control" [(ngModel)]="giftPlanId">
+          <option [value]="1">أساسي - Basic</option>
+          <option [value]="2">مميز - Premium</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>المدة (أيام)</label>
+        <input type="number" class="form-control" [(ngModel)]="giftDays" min="1" />
+      </div>
+      <div class="form-group">
+        <label>السبب</label>
+        <textarea class="form-control" [(ngModel)]="giftReason" placeholder="سبب الإهداء..."></textarea>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-primary" (click)="submitGift()" [disabled]="!giftDriverId || !giftReason">إهداء</button>
+        <button class="btn btn-secondary" (click)="showGift.set(false)">إلغاء</button>
+      </div>
+    </div>
+  </div>
+}

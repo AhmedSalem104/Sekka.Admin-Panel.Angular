@@ -1,0 +1,70 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>سجل العمليات</h1>
+    <span class="badge badge-info">{{ totalCount }} عملية</span>
+  </div>
+
+  <div class="filters-bar">
+    <div class="search-box" style="flex: 1; max-width: 400px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="ابحث بالمستخدم أو الكيان..." [(ngModel)]="search" (keyup.enter)="onSearch()" />
+    </div>
+    <select class="form-control" style="width: 180px; height: 44px;" [(ngModel)]="actionFilter" (change)="onSearch()">
+      <option value="">كل العمليات</option>
+      <option value="Create">إنشاء</option>
+      <option value="Update">تعديل</option>
+      <option value="Delete">حذف</option>
+      <option value="Login">تسجيل دخول</option>
+      <option value="Logout">تسجيل خروج</option>
+    </select>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">📝</div>
+      <h3>مفيش سجلات</h3>
+      <p>مفيش نتائج للبحث ده</p>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>العملية</th>
+            <th>الكيان</th>
+            <th>معرف الكيان</th>
+            <th>المستخدم</th>
+            <th>عنوان IP</th>
+            <th>التفاصيل</th>
+            <th>التاريخ</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr>
+              <td><span class="badge" [ngClass]="getActionBadge(item.action)">{{ item.action || '—' }}</span></td>
+              <td style="font-weight: 600;">{{ item.entityType || '—' }}</td>
+              <td style="font-family: monospace; font-size: 12px;">{{ item.entityId || '—' }}</td>
+              <td>{{ item.userName || '—' }}</td>
+              <td style="font-family: monospace; font-size: 12px;">{{ item.ipAddress || '—' }}</td>
+              <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ item.details || '—' }}</td>
+              <td>{{ item.createdAt | date:'yyyy/MM/dd HH:mm:ss' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">‹</button>
+        @for (p of [].constructor(totalPages); track $index) {
+          <button [class.active]="currentPage === $index + 1" (click)="onPageChange($index + 1)">{{ $index + 1 }}</button>
+        }
+        <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">›</button>
+      </div>
+    }
+  }
+</div>

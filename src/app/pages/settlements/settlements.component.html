@@ -1,0 +1,142 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>التسويات</h1>
+    <span class="badge badge-info">{{ totalCount }} تسوية</span>
+  </div>
+
+  <div class="filters-bar">
+    <div class="search-box" style="flex: 1; max-width: 400px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="ابحث..." [(ngModel)]="search" (keyup.enter)="onSearch()" />
+    </div>
+    <select class="form-control" style="width: 160px; height: 44px;" [(ngModel)]="statusFilter" (change)="onSearch()">
+      <option value="">كل الحالات</option>
+      <option value="1">قيد الانتظار</option>
+      <option value="2">معتمد</option>
+      <option value="3">مدفوع</option>
+      <option value="4">مرفوض</option>
+    </select>
+    <select class="form-control" style="width: 160px; height: 44px;" [(ngModel)]="typeFilter" (change)="onSearch()">
+      <option value="">الكل</option>
+      <option value="driver">سائق</option>
+      <option value="partner">شريك</option>
+    </select>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">💰</div>
+      <h3>مفيش تسويات</h3>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>المستفيد</th>
+            <th>النوع</th>
+            <th>المبلغ</th>
+            <th>الحالة</th>
+            <th>الفترة</th>
+            <th>الطلبات</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr style="cursor: pointer;" (click)="viewSettlement(item.id)">
+              <td style="font-weight: 600; color: var(--text-headline);">{{ item.recipientName || '—' }}</td>
+              <td><span class="badge badge-info">{{ item.recipientType === 'driver' ? 'سائق' : 'شريك' }}</span></td>
+              <td style="font-weight: 700; color: var(--success);">{{ item.amount?.toLocaleString() }} ج.م</td>
+              <td><span class="badge" [ngClass]="getStatusBadge(item.status)">{{ item.statusName || '—' }}</span></td>
+              <td style="font-size: 13px;">{{ item.periodFrom | date:'MM/dd' }} - {{ item.periodTo | date:'MM/dd' }}</td>
+              <td>{{ item.ordersCount }}</td>
+              <td (click)="$event.stopPropagation()">
+                <div style="display: flex; gap: 4px;">
+                  @if (item.status === 1) {
+                    <button class="btn btn-sm btn-success" (click)="approveSettlement(item.id)">اعتماد</button>
+                    <button class="btn btn-sm btn-danger" (click)="rejectSettlement(item.id)">رفض</button>
+                  }
+                  @if (item.status === 2) {
+                    <button class="btn btn-sm btn-primary" (click)="openProcess(item.id)">دفع</button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">‹</button>
+        @for (p of [].constructor(Math.min(totalPages, 10)); track $index) {
+          <button [class.active]="currentPage === $index + 1" (click)="onPageChange($index + 1)">{{ $index + 1 }}</button>
+        }
+        <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">›</button>
+      </div>
+    }
+  }
+</div>
+
+<!-- Settlement Detail Modal -->
+@if (showDetail()) {
+  <div class="modal-overlay" (click)="showDetail.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 550px;">
+      @if (selectedSettlement(); as s) {
+        <h2 style="margin-bottom: 16px;">تفاصيل التسوية</h2>
+        <div class="grid-2" style="gap: 12px; margin-bottom: 16px;">
+          <div class="card" style="padding: 12px; text-align: center;">
+            <div style="font-size: 12px; color: var(--text-caption);">المبلغ الإجمالي</div>
+            <div style="font-size: 20px; font-weight: 700;">{{ s.amount?.toLocaleString() }} ج.م</div>
+          </div>
+          <div class="card" style="padding: 12px; text-align: center;">
+            <div style="font-size: 12px; color: var(--text-caption);">الصافي</div>
+            <div style="font-size: 20px; font-weight: 700; color: var(--success);">{{ s.netAmount?.toLocaleString() }} ج.م</div>
+          </div>
+        </div>
+        @if (s.breakdown) {
+          <h4 style="margin-bottom: 8px;">التفاصيل</h4>
+          <div style="border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; padding: 4px 0;"><span>رسوم التوصيل</span><strong>{{ s.breakdown.deliveryFees }} ج.م</strong></div>
+            <div style="display: flex; justify-content: space-between; padding: 4px 0;"><span>إكراميات</span><strong>{{ s.breakdown.tips }} ج.م</strong></div>
+            <div style="display: flex; justify-content: space-between; padding: 4px 0;"><span>مكافآت</span><strong>{{ s.breakdown.bonuses }} ج.م</strong></div>
+            <div style="display: flex; justify-content: space-between; padding: 4px 0; color: var(--error);"><span>خصومات</span><strong>{{ s.breakdown.penalties }} ج.م</strong></div>
+          </div>
+        }
+        <button class="btn btn-secondary" (click)="showDetail.set(false)">إغلاق</button>
+      } @else {
+        <div class="loading-spinner"><div class="spinner"></div></div>
+      }
+    </div>
+  </div>
+}
+
+<!-- Process Payment Modal -->
+@if (showProcess()) {
+  <div class="modal-overlay" (click)="showProcess.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h2 style="margin-bottom: 16px;">تنفيذ الدفع</h2>
+      <div class="form-group">
+        <label>طريقة الدفع</label>
+        <select class="form-control" [(ngModel)]="paymentMethod">
+          <option value="BankTransfer">تحويل بنكي</option>
+          <option value="VodafoneCash">فودافون كاش</option>
+          <option value="InstaPay">انستاباي</option>
+          <option value="Fawry">فوري</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>رقم المعاملة</label>
+        <input type="text" class="form-control" [(ngModel)]="transactionRef" placeholder="TXN-..." />
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-primary" (click)="submitProcess()" [disabled]="!transactionRef">تأكيد الدفع</button>
+        <button class="btn btn-secondary" (click)="showProcess.set(false)">إلغاء</button>
+      </div>
+    </div>
+  </div>
+}

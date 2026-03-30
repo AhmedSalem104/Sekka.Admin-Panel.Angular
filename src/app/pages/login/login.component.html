@@ -1,0 +1,73 @@
+<div class="login-page">
+  <div class="login-card">
+    <!-- Logo -->
+    <div class="login-logo">
+      <div class="logo-icon">سِ</div>
+      <h1>سِكّة</h1>
+      <p>لوحة التحكم — شريك شغلك في الديليفري</p>
+    </div>
+
+    <!-- Form -->
+    <form (ngSubmit)="onSubmit()">
+      @if (error()) {
+        <div class="error-alert">
+          {{ error() }}
+        </div>
+      }
+
+      <div class="form-group">
+        <label for="phone">رقم الموبايل</label>
+        <input
+          id="phone"
+          type="tel"
+          class="form-control"
+          placeholder="+201012345678"
+          [(ngModel)]="phone"
+          name="phone"
+          [disabled]="loading()"
+          dir="ltr"
+          style="text-align: left;"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="password">كلمة المرور</label>
+        <div class="password-field">
+          <input
+            id="password"
+            [type]="showPassword() ? 'text' : 'password'"
+            class="form-control"
+            placeholder="••••••••"
+            [(ngModel)]="password"
+            name="password"
+            [disabled]="loading()"
+          />
+          <button
+            type="button"
+            class="toggle-password"
+            (click)="showPassword.update(v => !v)"
+          >
+            {{ showPassword() ? '🙈' : '👁️' }}
+          </button>
+        </div>
+      </div>
+
+      <button
+        type="submit"
+        class="btn btn-primary login-btn"
+        [disabled]="loading()"
+      >
+        @if (loading()) {
+          <div class="spinner-sm"></div>
+          جاري الدخول...
+        } @else {
+          دخول
+        }
+      </button>
+    </form>
+
+    <p class="login-footer">
+      Sekka Admin Panel v1.0
+    </p>
+  </div>
+</div>

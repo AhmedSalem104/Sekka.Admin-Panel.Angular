@@ -1,0 +1,200 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>المركبات</h1>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span class="badge badge-info">{{ totalCount }} مركبة</span>
+      <button class="btn btn-primary" (click)="openCreate()">+ إضافة مركبة</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  @if (stats(); as s) {
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
+      <div class="stat-card">
+        <div class="stat-label">إجمالي المركبات</div>
+        <div class="stat-value">{{ s.totalVehicles ?? 0 }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">نشطة</div>
+        <div class="stat-value" style="color: var(--success);">{{ s.activeVehicles ?? 0 }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">فحص مستحق</div>
+        <div class="stat-value" style="color: var(--warning);">{{ s.inspectionDue ?? 0 }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">فحص فاشل</div>
+        <div class="stat-value" style="color: var(--error);">{{ s.inspectionFailed ?? 0 }}</div>
+      </div>
+    </div>
+  }
+
+  <div class="filters-bar">
+    <div class="search-box" style="flex: 1; max-width: 400px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="ابحث بلوحة المركبة..." [(ngModel)]="search" (keyup.enter)="onSearch()" />
+    </div>
+    <select class="form-control" style="width: 180px; height: 44px;" [(ngModel)]="typeFilter" (change)="onSearch()">
+      <option value="">كل الأنواع</option>
+      <option value="0">موتوسيكل</option>
+      <option value="1">سيارة</option>
+      <option value="2">فان</option>
+      <option value="3">تراك</option>
+      <option value="4">دراجة</option>
+    </select>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">🚛</div>
+      <h3>مفيش مركبات</h3>
+      <p>مفيش نتائج للبحث ده</p>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>المركبة</th>
+            <th>رقم اللوحة</th>
+            <th>السائق</th>
+            <th>النوع</th>
+            <th>الحالة</th>
+            <th>آخر فحص</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr>
+              <td style="font-weight: 600; color: var(--text-headline); cursor: pointer;" (click)="viewVehicle(item.id)">{{ item.make || '' }} {{ item.model || '—' }}</td>
+              <td style="font-weight: 600; font-family: monospace;">{{ item.plateNumber || '—' }}</td>
+              <td>{{ item.driverName || 'غير مُعيّن' }}</td>
+              <td><span class="badge badge-info">{{ getVehicleType(item.type) }}</span></td>
+              <td><span class="badge" [ngClass]="getStatusBadge(item.status)">{{ getStatusLabel(item.status) }}</span></td>
+              <td>
+                @if (item.lastInspectionDate) {
+                  <span class="badge" [ngClass]="getInspectionBadge(item.inspectionStatus)">{{ item.lastInspectionDate | date:'yyyy/MM/dd' }}</span>
+                } @else {
+                  <span style="color: var(--text-caption);">—</span>
+                }
+              </td>
+              <td>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                  @if (item.status !== 'Active') {
+                    <button class="btn btn-sm btn-success" (click)="activateVehicle(item.id)">تفعيل</button>
+                  }
+                  @if (item.status === 'Active') {
+                    <button class="btn btn-sm btn-danger" (click)="deactivateVehicle(item.id)">إيقاف</button>
+                  }
+                  <button class="btn btn-sm btn-outline" (click)="recordInspection(item.id)">فحص</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">‹</button>
+        @for (p of [].constructor(Math.min(totalPages, 10)); track $index) {
+          <button [class.active]="currentPage === $index + 1" (click)="onPageChange($index + 1)">{{ $index + 1 }}</button>
+        }
+        <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">›</button>
+      </div>
+    }
+  }
+</div>
+
+<!-- Detail Modal -->
+@if (showDetail()) {
+  <div class="modal-overlay" (click)="showDetail.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 600px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">تفاصيل المركبة</h2>
+        <button class="btn btn-sm btn-outline" (click)="showDetail.set(false)">✕</button>
+      </div>
+
+      @if (selectedVehicle(); as v) {
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+          <div><strong>المركبة:</strong> {{ v.make }} {{ v.model }}</div>
+          <div><strong>رقم اللوحة:</strong> {{ v.plateNumber }}</div>
+          <div><strong>النوع:</strong> {{ getVehicleType(v.type) }}</div>
+          <div><strong>اللون:</strong> {{ v.color || '—' }}</div>
+          <div><strong>سنة الصنع:</strong> {{ v.year || '—' }}</div>
+          <div><strong>السائق:</strong> {{ v.driverName || 'غير مُعيّن' }}</div>
+          <div><strong>الحالة:</strong> <span class="badge" [ngClass]="getStatusBadge(v.status)">{{ getStatusLabel(v.status) }}</span></div>
+          <div><strong>آخر فحص:</strong> {{ v.lastInspectionDate ? (v.lastInspectionDate | date:'yyyy/MM/dd') : '—' }}</div>
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          @if (v.status !== 'Active') {
+            <button class="btn btn-success" (click)="activateVehicle(v.id)">تفعيل</button>
+          }
+          @if (v.status === 'Active') {
+            <button class="btn btn-danger" (click)="deactivateVehicle(v.id)">إيقاف</button>
+          }
+          <button class="btn btn-outline" (click)="recordInspection(v.id)">تسجيل فحص</button>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- Create Modal -->
+@if (showCreate()) {
+  <div class="modal-overlay" (click)="showCreate.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 600px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">إضافة مركبة جديدة</h2>
+        <button class="btn btn-sm btn-outline" (click)="showCreate.set(false)">✕</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="form-group">
+          <label>رقم السائق (Driver ID)</label>
+          <input class="form-control" [(ngModel)]="newVehicle.driverId" placeholder="أدخل رقم السائق" />
+        </div>
+        <div class="form-group">
+          <label>نوع المركبة</label>
+          <select class="form-control" [(ngModel)]="newVehicle.type">
+            <option [ngValue]="0">موتوسيكل</option>
+            <option [ngValue]="1">سيارة</option>
+            <option [ngValue]="2">فان</option>
+            <option [ngValue]="3">تراك</option>
+            <option [ngValue]="4">دراجة</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>رقم اللوحة</label>
+          <input class="form-control" [(ngModel)]="newVehicle.plateNumber" placeholder="مثال: أ ب ج 1234" />
+        </div>
+        <div class="form-group">
+          <label>الشركة المصنعة</label>
+          <input class="form-control" [(ngModel)]="newVehicle.make" placeholder="مثال: تويوتا" />
+        </div>
+        <div class="form-group">
+          <label>الموديل</label>
+          <input class="form-control" [(ngModel)]="newVehicle.model" placeholder="مثال: كورولا" />
+        </div>
+        <div class="form-group">
+          <label>سنة الصنع</label>
+          <input class="form-control" type="number" [(ngModel)]="newVehicle.year" />
+        </div>
+        <div class="form-group" style="grid-column: span 2;">
+          <label>اللون</label>
+          <input class="form-control" [(ngModel)]="newVehicle.color" placeholder="مثال: أبيض" />
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px;">
+        <button class="btn btn-outline" (click)="showCreate.set(false)">إلغاء</button>
+        <button class="btn btn-primary" (click)="createVehicle()" [disabled]="!newVehicle.plateNumber || !newVehicle.make">إضافة المركبة</button>
+      </div>
+    </div>
+  </div>
+}

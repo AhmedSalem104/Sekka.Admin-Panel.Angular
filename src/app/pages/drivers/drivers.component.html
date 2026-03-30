@@ -1,0 +1,183 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>السائقين</h1>
+    <span class="badge badge-info">{{ totalCount }} سائق</span>
+  </div>
+
+  <div class="filters-bar">
+    <div class="search-box" style="flex: 1; max-width: 400px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="ابحث بالاسم أو رقم التليفون..." [(ngModel)]="search" (keyup.enter)="onSearch()" />
+    </div>
+    <select class="form-control" style="width: 160px; height: 44px;" [(ngModel)]="statusFilter" (change)="onSearch()">
+      <option value="">كل الحالات</option>
+      <option value="1">نشط</option>
+      <option value="0">غير نشط</option>
+      <option value="2">موقوف</option>
+      <option value="3">محظور</option>
+    </select>
+    <select class="form-control" style="width: 160px; height: 44px;" [(ngModel)]="onlineFilter" (change)="onSearch()">
+      <option value="">الكل</option>
+      <option value="true">متصل</option>
+      <option value="false">غير متصل</option>
+    </select>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">🚗</div>
+      <h3>مفيش سائقين</h3>
+      <p>مفيش نتائج للبحث ده</p>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>السائق</th>
+            <th>التليفون</th>
+            <th>الحالة</th>
+            <th>متصل</th>
+            <th>التقييم</th>
+            <th>الطلبات</th>
+            <th>تاريخ التسجيل</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr style="cursor: pointer;" (click)="viewDriver(item.id)">
+              <td>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div class="avatar avatar-sm">{{ item.name?.charAt(0) || 'س' }}</div>
+                  <span style="font-weight: 600; color: var(--text-headline);">{{ item.name || '—' }}</span>
+                </div>
+              </td>
+              <td dir="ltr" style="text-align: right;">{{ item.phone || '—' }}</td>
+              <td><span class="badge" [ngClass]="getStatusBadge(item.status)">{{ item.statusName || getStatusName(item.status) }}</span></td>
+              <td>
+                <span class="badge" [ngClass]="item.isOnline ? 'badge-success' : 'badge-inactive'">
+                  {{ item.isOnline ? 'متصل' : 'غير متصل' }}
+                </span>
+              </td>
+              <td>⭐ {{ item.rating?.toFixed(1) || '0.0' }}</td>
+              <td>{{ item.totalOrders || 0 }}</td>
+              <td>{{ item.joinedAt | date:'yyyy/MM/dd' }}</td>
+              <td (click)="$event.stopPropagation()">
+                <div style="display: flex; gap: 6px;">
+                  <button class="btn btn-sm btn-secondary" (click)="viewPerformance(item.id)">📊</button>
+                  <button class="btn btn-sm" [ngClass]="item.status === 1 ? 'btn-danger' : 'btn-success'" (click)="toggleDriverStatus(item)">
+                    {{ item.status === 1 ? 'تعطيل' : 'تفعيل' }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">‹</button>
+        @for (p of [].constructor(Math.min(totalPages, 10)); track $index) {
+          <button [class.active]="currentPage === $index + 1" (click)="onPageChange($index + 1)">{{ $index + 1 }}</button>
+        }
+        <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">›</button>
+      </div>
+    }
+  }
+</div>
+
+<!-- Driver Detail Modal -->
+@if (showDetail()) {
+  <div class="modal-overlay" (click)="showDetail.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 600px;">
+      @if (detailLoading()) {
+        <div class="loading-spinner"><div class="spinner"></div></div>
+      } @else if (selectedDriver(); as d) {
+        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
+          <div class="avatar avatar-lg">{{ d.name?.charAt(0) }}</div>
+          <div>
+            <h2 style="margin: 0;">{{ d.name }}</h2>
+            <p style="color: var(--text-caption); margin: 0;">{{ d.phone }}</p>
+          </div>
+          <span class="badge" [ngClass]="getStatusBadge(d.status)" style="margin-right: auto;">{{ d.statusName || getStatusName(d.status) }}</span>
+        </div>
+
+        <div class="grid-2" style="gap: 12px; margin-bottom: 20px;">
+          <div class="card" style="padding: 12px; text-align: center;">
+            <div style="font-size: 12px; color: var(--text-caption);">التقييم</div>
+            <div style="font-size: 22px; font-weight: 700;">⭐ {{ d.rating }}</div>
+          </div>
+          <div class="card" style="padding: 12px; text-align: center;">
+            <div style="font-size: 12px; color: var(--text-caption);">الطلبات</div>
+            <div style="font-size: 22px; font-weight: 700;">{{ d.totalOrders }}</div>
+          </div>
+          <div class="card" style="padding: 12px; text-align: center;">
+            <div style="font-size: 12px; color: var(--text-caption);">المحفظة</div>
+            <div style="font-size: 22px; font-weight: 700;">{{ d.walletBalance }} ج.م</div>
+          </div>
+          <div class="card" style="padding: 12px; text-align: center;">
+            <div style="font-size: 12px; color: var(--text-caption);">المستوى</div>
+            <div style="font-size: 22px; font-weight: 700;">{{ d.level }}</div>
+          </div>
+        </div>
+
+        @if (d.currentSubscription) {
+          <div class="card" style="padding: 12px; margin-bottom: 16px;">
+            <strong>الاشتراك:</strong> {{ d.currentSubscription.planName }}
+            <span class="badge badge-active" style="margin: 0 8px;">نشط</span>
+            ينتهي: {{ d.currentSubscription.expiresAt | date:'yyyy/MM/dd' }}
+          </div>
+        }
+
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-secondary" (click)="showDetail.set(false)">إغلاق</button>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- Performance Modal -->
+@if (showPerformance()) {
+  <div class="modal-overlay" (click)="showPerformance.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 600px;">
+      <h2 style="margin-bottom: 16px;">📊 أداء السائق</h2>
+      @if (performance(); as p) {
+        <div class="grid-2" style="gap: 12px; margin-bottom: 16px;">
+          <div class="card" style="padding: 12px; text-align: center;">
+            <div style="font-size: 12px; color: var(--text-caption);">الطلبات المكتملة</div>
+            <div style="font-size: 22px; font-weight: 700; color: var(--success);">{{ p.completedOrders }}</div>
+          </div>
+          <div class="card" style="padding: 12px; text-align: center;">
+            <div style="font-size: 12px; color: var(--text-caption);">معدل الإتمام</div>
+            <div style="font-size: 22px; font-weight: 700;">{{ p.completionRate }}%</div>
+          </div>
+          <div class="card" style="padding: 12px; text-align: center;">
+            <div style="font-size: 12px; color: var(--text-caption);">متوسط التوصيل</div>
+            <div style="font-size: 22px; font-weight: 700;">{{ p.averageDeliveryTime }} دقيقة</div>
+          </div>
+          <div class="card" style="padding: 12px; text-align: center;">
+            <div style="font-size: 12px; color: var(--text-caption);">التسليم في الوقت</div>
+            <div style="font-size: 22px; font-weight: 700;">{{ p.onTimeDeliveryRate }}%</div>
+          </div>
+          <div class="card" style="padding: 12px; text-align: center;">
+            <div style="font-size: 12px; color: var(--text-caption);">إجمالي الأرباح</div>
+            <div style="font-size: 22px; font-weight: 700; color: var(--primary);">{{ p.totalEarnings }} ج.م</div>
+          </div>
+          <div class="card" style="padding: 12px; text-align: center;">
+            <div style="font-size: 12px; color: var(--text-caption);">الإكراميات</div>
+            <div style="font-size: 22px; font-weight: 700;">{{ p.totalTips }} ج.م</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary" (click)="showPerformance.set(false)">إغلاق</button>
+      } @else {
+        <div class="loading-spinner"><div class="spinner"></div></div>
+      }
+    </div>
+  </div>
+}

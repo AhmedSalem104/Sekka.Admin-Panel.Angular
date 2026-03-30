@@ -1,0 +1,54 @@
+<!-- Mobile Overlay -->
+<div class="sidebar-overlay"
+     [class.active]="mobileOpen()"
+     (click)="closeMobile()">
+</div>
+
+<!-- Sidebar -->
+<aside class="sidebar"
+       [class.collapsed]="collapsed()"
+       [class.mobile-open]="mobileOpen()">
+
+  <!-- Logo -->
+  <div class="sidebar-logo">
+    <div class="logo-icon">سِ</div>
+    @if (!collapsed()) {
+      <div class="logo-text">
+        <span class="logo-name">سِكّة</span>
+        <span class="logo-subtitle">لوحة التحكم</span>
+      </div>
+    }
+    <button class="collapse-btn hide-mobile" (click)="toggleCollapse()">
+      {{ collapsed() ? '→' : '←' }}
+    </button>
+    <button class="collapse-btn show-mobile" (click)="closeMobile()">
+      ✕
+    </button>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="sidebar-nav">
+    @for (group of navGroups; track group.title) {
+      <div class="nav-group">
+        @if (!collapsed()) {
+          <div class="nav-group-title">{{ group.title }}</div>
+        }
+        @for (item of group.items; track item.route) {
+          <a class="nav-item"
+             [routerLink]="item.route"
+             [class.active]="isActive(item.route)"
+             (click)="closeMobile()"
+             [title]="collapsed() ? item.label : ''">
+            <span class="nav-icon">{{ item.icon }}</span>
+            @if (!collapsed()) {
+              <span class="nav-label">{{ item.label }}</span>
+            }
+            @if (item.badge && !collapsed()) {
+              <span class="nav-badge">{{ item.badge }}</span>
+            }
+          </a>
+        }
+      </div>
+    }
+  </nav>
+</aside>

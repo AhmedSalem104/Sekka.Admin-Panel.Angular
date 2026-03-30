@@ -1,0 +1,179 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>الشرائح</h1>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span class="badge badge-info">{{ totalCount }} شريحة</span>
+      <button class="btn btn-primary" (click)="showCreate.set(true)">+ إنشاء شريحة</button>
+    </div>
+  </div>
+
+  <div class="filters-bar">
+    <div class="search-box" style="flex: 1; max-width: 400px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="ابحث بالاسم..." [(ngModel)]="search" (keyup.enter)="onSearch()" />
+    </div>
+    <select class="form-control" style="width: 180px; height: 44px;" [(ngModel)]="typeFilter" (change)="onSearch()">
+      <option value="">كل الأنواع</option>
+      <option value="driver">سائق</option>
+      <option value="customer">عميل</option>
+      <option value="partner">شريك</option>
+    </select>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">🎯</div>
+      <h3>مفيش شرائح</h3>
+      <p>مفيش نتائج للبحث ده</p>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>الشريحة</th>
+            <th>النوع</th>
+            <th>عدد المستخدمين</th>
+            <th>ديناميكي</th>
+            <th>نشط</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr>
+              <td style="font-weight: 600; color: var(--text-headline);">{{ item.name || '—' }}</td>
+              <td>
+                <span class="badge badge-info">{{ getTypeLabel(item.type) }}</span>
+              </td>
+              <td style="font-weight: 600;">{{ item.usersCount || 0 }}</td>
+              <td>
+                <span class="badge" [ngClass]="item.isDynamic ? 'badge-in-transit' : 'badge-inactive'">
+                  {{ item.isDynamic ? 'ديناميكي' : 'ثابت' }}
+                </span>
+              </td>
+              <td>
+                <span class="badge" [ngClass]="item.isActive ? 'badge-active' : 'badge-inactive'">
+                  {{ item.isActive ? 'نشط' : 'غير نشط' }}
+                </span>
+              </td>
+              <td>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                  <button class="btn btn-sm btn-outline" (click)="viewSegment(item.id)">عرض</button>
+                  <button class="btn btn-sm btn-outline" (click)="refreshSegment(item.id)">تحديث</button>
+                  <button class="btn btn-sm" [ngClass]="item.isActive ? 'btn-warning' : 'btn-success'" (click)="toggleSegment(item.id)">
+                    {{ item.isActive ? 'تعطيل' : 'تفعيل' }}
+                  </button>
+                  <button class="btn btn-sm btn-danger" (click)="deleteSegment(item.id)">حذف</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">‹</button>
+        @for (p of [].constructor(Math.min(totalPages, 10)); track $index) {
+          <button [class.active]="currentPage === $index + 1" (click)="onPageChange($index + 1)">{{ $index + 1 }}</button>
+        }
+        <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">›</button>
+      </div>
+    }
+  }
+
+  <!-- Create Modal -->
+  @if (showCreate()) {
+    <div class="modal-overlay" (click)="showCreate.set(false)">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>إنشاء شريحة جديدة</h2>
+          <button class="modal-close" (click)="showCreate.set(false)">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>الاسم</label>
+            <input type="text" class="form-control" [(ngModel)]="newSegment.name" placeholder="اسم الشريحة" />
+          </div>
+          <div class="form-group">
+            <label>الوصف</label>
+            <textarea class="form-control" [(ngModel)]="newSegment.description" placeholder="وصف الشريحة" rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label>النوع</label>
+            <select class="form-control" [(ngModel)]="newSegment.type">
+              <option value="driver">سائق</option>
+              <option value="customer">عميل</option>
+              <option value="partner">شريك</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" [(ngModel)]="newSegment.isDynamic" />
+              ديناميكي
+            </label>
+          </div>
+          <div class="form-group">
+            <label>القواعد (JSON)</label>
+            <textarea class="form-control" [(ngModel)]="newSegment.rules" placeholder='{"field": "value"}' rows="4" dir="ltr"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="showCreate.set(false)">إلغاء</button>
+          <button class="btn btn-primary" (click)="createSegment()" [disabled]="!newSegment.name">إنشاء</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Detail Modal -->
+  @if (showDetail() && selectedSegment()) {
+    <div class="modal-overlay" (click)="showDetail.set(false)">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>{{ selectedSegment().name }}</h2>
+          <button class="modal-close" (click)="showDetail.set(false)">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-grid">
+            <div class="detail-item">
+              <span class="detail-label">النوع</span>
+              <span class="detail-value">{{ getTypeLabel(selectedSegment().type) }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">عدد المستخدمين</span>
+              <span class="detail-value">{{ selectedSegment().usersCount || 0 }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">ديناميكي</span>
+              <span class="detail-value">{{ selectedSegment().isDynamic ? 'نعم' : 'لا' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">نشط</span>
+              <span class="detail-value">{{ selectedSegment().isActive ? 'نعم' : 'لا' }}</span>
+            </div>
+          </div>
+          @if (selectedSegment().description) {
+            <div class="detail-item" style="margin-top: 16px;">
+              <span class="detail-label">الوصف</span>
+              <p>{{ selectedSegment().description }}</p>
+            </div>
+          }
+          @if (selectedSegment().rules) {
+            <div class="detail-item" style="margin-top: 16px;">
+              <span class="detail-label">القواعد</span>
+              <pre dir="ltr" style="background: var(--bg-surface); padding: 12px; border-radius: 8px; overflow-x: auto;">{{ selectedSegment().rules | json }}</pre>
+            </div>
+          }
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="showDetail.set(false)">إغلاق</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

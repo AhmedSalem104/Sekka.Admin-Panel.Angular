@@ -1,0 +1,144 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>النزاعات</h1>
+    <span class="badge badge-info">{{ totalCount }} نزاع</span>
+  </div>
+
+  <div class="filters-bar">
+    <div class="search-box" style="flex: 1; max-width: 400px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="ابحث برقم النزاع..." [(ngModel)]="search" (keyup.enter)="onSearch()" />
+    </div>
+    <select class="form-control" style="width: 180px; height: 44px;" [(ngModel)]="statusFilter" (change)="onSearch()">
+      <option value="">كل الحالات</option>
+      <option value="Open">مفتوح</option>
+      <option value="InProgress">قيد المعالجة</option>
+      <option value="Resolved">تم الحل</option>
+      <option value="Closed">مغلق</option>
+      <option value="Escalated">مُصعّد</option>
+    </select>
+    <select class="form-control" style="width: 180px; height: 44px;" [(ngModel)]="priorityFilter" (change)="onSearch()">
+      <option value="">كل الأولويات</option>
+      <option value="Critical">حرج</option>
+      <option value="High">عالي</option>
+      <option value="Medium">متوسط</option>
+      <option value="Low">منخفض</option>
+    </select>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">⚖️</div>
+      <h3>مفيش نزاعات</h3>
+      <p>مفيش نتائج للبحث ده</p>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>رقم النزاع</th>
+            <th>النوع</th>
+            <th>الأولوية</th>
+            <th>الحالة</th>
+            <th>الطلب</th>
+            <th>المشتكي</th>
+            <th>التاريخ</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr (click)="viewDispute(item.id)" style="cursor: pointer;">
+              <td style="font-weight: 600; color: var(--primary);">#{{ item.disputeNumber || item.id }}</td>
+              <td>{{ item.type || '—' }}</td>
+              <td><span class="badge" [ngClass]="getPriorityBadge(item.priority)">{{ item.priority || '—' }}</span></td>
+              <td><span class="badge" [ngClass]="getStatusBadge(item.status)">{{ item.status || '—' }}</span></td>
+              <td>#{{ item.orderNumber || '—' }}</td>
+              <td>{{ item.complainantName || '—' }}</td>
+              <td>{{ item.createdAt | date:'yyyy/MM/dd HH:mm' }}</td>
+              <td (click)="$event.stopPropagation()">
+                <div style="display: flex; gap: 4px;">
+                  <button class="btn btn-sm btn-outline-success" (click)="resolveDispute(item.id)">حل</button>
+                  <button class="btn btn-sm btn-outline-warning" (click)="escalateDispute(item.id)">تصعيد</button>
+                  <button class="btn btn-sm btn-outline-primary" (click)="respondDispute(item.id)">رد</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">‹</button>
+        @for (p of [].constructor(Math.min(totalPages, 10)); track $index) {
+          <button [class.active]="currentPage === $index + 1" (click)="onPageChange($index + 1)">{{ $index + 1 }}</button>
+        }
+        <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">›</button>
+      </div>
+    }
+  }
+</div>
+
+<!-- Dispute Detail Modal -->
+@if (showDetail()) {
+  <div class="modal-overlay" (click)="showDetail.set(false)">
+    <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>تفاصيل النزاع</h2>
+        <button class="modal-close" (click)="showDetail.set(false)">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 24px;">
+        @if (selectedDispute(); as d) {
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+            <div><strong>رقم النزاع:</strong> #{{ d.disputeNumber || d.id }}</div>
+            <div><strong>النوع:</strong> {{ d.type || '—' }}</div>
+            <div><strong>الأولوية:</strong> <span class="badge" [ngClass]="getPriorityBadge(d.priority)">{{ d.priority }}</span></div>
+            <div><strong>الحالة:</strong> <span class="badge" [ngClass]="getStatusBadge(d.status)">{{ d.status }}</span></div>
+            <div><strong>رقم الطلب:</strong> #{{ d.orderNumber || '—' }}</div>
+            <div><strong>المشتكي:</strong> {{ d.complainantName || '—' }}</div>
+            <div><strong>التاريخ:</strong> {{ d.createdAt | date:'yyyy/MM/dd HH:mm' }}</div>
+            <div><strong>الوصف:</strong> {{ d.description || '—' }}</div>
+          </div>
+
+          @if (d.messages?.length) {
+            <h3 style="margin-bottom: 12px; color: var(--text-headline);">الرسائل</h3>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; max-height: 300px; overflow-y: auto;">
+              @for (msg of d.messages; track $index) {
+                <div style="background: var(--bg-card); padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <strong>{{ msg.senderName || 'مجهول' }}</strong>
+                    <span style="font-size: 12px; color: var(--text-muted);">{{ msg.createdAt | date:'yyyy/MM/dd HH:mm' }}</span>
+                  </div>
+                  <p style="margin: 0;">{{ msg.message || msg.content }}</p>
+                </div>
+              }
+            </div>
+          }
+
+          @if (d.evidence?.length) {
+            <h3 style="margin-bottom: 12px; color: var(--text-headline);">الأدلة</h3>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px;">
+              @for (ev of d.evidence; track $index) {
+                <a [href]="ev.url" target="_blank" style="padding: 8px 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: var(--primary);">
+                  {{ ev.fileName || 'ملف ' + ($index + 1) }}
+                </a>
+              }
+            </div>
+          }
+
+          <div style="display: flex; gap: 8px; justify-content: flex-end;">
+            <button class="btn btn-success" (click)="resolveDispute(d.id)">حل</button>
+            <button class="btn btn-warning" (click)="escalateDispute(d.id)">تصعيد</button>
+            <button class="btn btn-primary" (click)="respondDispute(d.id)">رد</button>
+            <button class="btn btn-secondary" (click)="showDetail.set(false)">إغلاق</button>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,134 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>الشركاء</h1>
+    <span class="badge badge-info">{{ totalCount }} شريك</span>
+  </div>
+
+  <div class="filters-bar">
+    <div class="search-box" style="flex: 1; max-width: 400px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="ابحث بالاسم أو التليفون..." [(ngModel)]="search" (keyup.enter)="onSearch()" />
+    </div>
+    <select class="form-control" style="width: 160px; height: 44px;" [(ngModel)]="statusFilter" (change)="onSearch()">
+      <option value="">كل الحالات</option>
+      <option value="0">قيد المراجعة</option>
+      <option value="1">قيد التحقق</option>
+      <option value="2">موثق</option>
+      <option value="3">مرفوض</option>
+    </select>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">🏪</div>
+      <h3>مفيش شركاء</h3>
+      <p>مفيش نتائج للبحث ده</p>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>الشريك</th>
+            <th>الفئة</th>
+            <th>التوثيق</th>
+            <th>العمولة</th>
+            <th>الطلبات</th>
+            <th>التقييم</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr style="cursor: pointer;" (click)="viewPartner(item.id)">
+              <td>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div class="avatar avatar-sm">{{ item.businessName?.charAt(0) || 'ش' }}</div>
+                  <div>
+                    <div style="font-weight: 600; color: var(--text-headline);">{{ item.businessName || '—' }}</div>
+                    <div style="font-size: 12px; color: var(--text-caption);">{{ item.ownerName }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>{{ item.category || '—' }}</td>
+              <td><span class="badge" [ngClass]="getVerificationBadge(item.verificationStatus)">{{ item.verificationStatusName || '—' }}</span></td>
+              <td style="font-weight: 600;">{{ item.commissionRate }}%</td>
+              <td>{{ item.totalOrders || 0 }}</td>
+              <td>⭐ {{ item.rating?.toFixed(1) || '0.0' }}</td>
+              <td (click)="$event.stopPropagation()">
+                <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                  @if (item.verificationStatus === 0 || item.verificationStatus === 1) {
+                    <button class="btn btn-sm btn-success" (click)="verifyPartner(item.id)">توثيق</button>
+                    <button class="btn btn-sm btn-danger" (click)="rejectPartner(item.id)">رفض</button>
+                  }
+                  <button class="btn btn-sm btn-secondary" (click)="updateCommission(item.id)">العمولة</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">‹</button>
+        @for (p of [].constructor(Math.min(totalPages, 10)); track $index) {
+          <button [class.active]="currentPage === $index + 1" (click)="onPageChange($index + 1)">{{ $index + 1 }}</button>
+        }
+        <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">›</button>
+      </div>
+    }
+  }
+</div>
+
+<!-- Partner Detail Modal -->
+@if (showDetail()) {
+  <div class="modal-overlay" (click)="showDetail.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 600px;">
+      @if (selectedPartner(); as p) {
+        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
+          <div class="avatar avatar-lg">{{ p.businessName?.charAt(0) }}</div>
+          <div>
+            <h2 style="margin: 0;">{{ p.businessName }}</h2>
+            <p style="color: var(--text-caption); margin: 0;">{{ p.ownerName }} — {{ p.phone }}</p>
+          </div>
+        </div>
+
+        <div class="grid-2" style="gap: 12px; margin-bottom: 16px;">
+          <div class="card" style="padding: 12px; text-align: center;">
+            <div style="font-size: 12px; color: var(--text-caption);">الطلبات</div>
+            <div style="font-size: 22px; font-weight: 700;">{{ p.totalOrders }}</div>
+          </div>
+          <div class="card" style="padding: 12px; text-align: center;">
+            <div style="font-size: 12px; color: var(--text-caption);">الإيرادات</div>
+            <div style="font-size: 22px; font-weight: 700; color: var(--success);">{{ p.totalRevenue?.toLocaleString() }} ج.م</div>
+          </div>
+          <div class="card" style="padding: 12px; text-align: center;">
+            <div style="font-size: 12px; color: var(--text-caption);">العمولة</div>
+            <div style="font-size: 22px; font-weight: 700; color: var(--primary);">{{ p.commissionRate }}%</div>
+          </div>
+          <div class="card" style="padding: 12px; text-align: center;">
+            <div style="font-size: 12px; color: var(--text-caption);">التقييم</div>
+            <div style="font-size: 22px; font-weight: 700;">⭐ {{ p.rating }}</div>
+          </div>
+        </div>
+
+        @if (p.address) {
+          <p style="margin-bottom: 8px;"><strong>العنوان:</strong> {{ p.address }}</p>
+        }
+        @if (p.taxId) {
+          <p style="margin-bottom: 8px;"><strong>الرقم الضريبي:</strong> {{ p.taxId }}</p>
+        }
+
+        <div style="display: flex; gap: 8px; margin-top: 16px;">
+          <button class="btn btn-secondary" (click)="showDetail.set(false)">إغلاق</button>
+        </div>
+      } @else {
+        <div class="loading-spinner"><div class="spinner"></div></div>
+      }
+    </div>
+  </div>
+}

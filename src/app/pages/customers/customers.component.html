@@ -1,0 +1,128 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>العملاء</h1>
+    <span class="badge badge-info">{{ totalCount }} عميل</span>
+  </div>
+
+  <div class="filters-bar">
+    <div class="search-box" style="flex: 1; max-width: 400px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="ابحث بالاسم أو التليفون..." [(ngModel)]="search" (keyup.enter)="onSearch()" />
+    </div>
+    <select class="form-control" style="width: 180px; height: 44px;" [(ngModel)]="statusFilter" (change)="onSearch()">
+      <option value="">كل الحالات</option>
+      <option value="Active">نشط</option>
+      <option value="Inactive">غير نشط</option>
+      <option value="Blocked">محظور</option>
+    </select>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">👥</div>
+      <h3>مفيش عملاء</h3>
+      <p>مفيش نتائج للبحث ده</p>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>العميل</th>
+            <th>التليفون</th>
+            <th>البريد الإلكتروني</th>
+            <th>الحالة</th>
+            <th>إجمالي الطلبات</th>
+            <th>إجمالي المصروفات</th>
+            <th>تاريخ التسجيل</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr (click)="viewCustomer(item.id)" style="cursor: pointer;">
+              <td>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div class="avatar avatar-sm">{{ item.name?.charAt(0) || 'ع' }}</div>
+                  <span style="font-weight: 600; color: var(--text-headline);">{{ item.name || '—' }}</span>
+                </div>
+              </td>
+              <td>{{ item.phone || '—' }}</td>
+              <td>{{ item.email || '—' }}</td>
+              <td><span class="badge" [ngClass]="getStatusBadge(item.status)">{{ item.status || '—' }}</span></td>
+              <td style="font-weight: 600;">{{ item.totalOrders || 0 }}</td>
+              <td style="font-weight: 600;">{{ item.totalSpent | number:'1.2-2' }} ج.م</td>
+              <td>{{ item.createdAt | date:'yyyy/MM/dd' }}</td>
+              <td (click)="$event.stopPropagation()">
+                @if (item.status === 'Active') {
+                  <button class="btn btn-sm btn-outline-danger" (click)="deactivateCustomer(item.id)">تعطيل</button>
+                } @else {
+                  <button class="btn btn-sm btn-outline-success" (click)="activateCustomer(item.id)">تفعيل</button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">‹</button>
+        @for (p of [].constructor(Math.min(totalPages, 10)); track $index) {
+          <button [class.active]="currentPage === $index + 1" (click)="onPageChange($index + 1)">{{ $index + 1 }}</button>
+        }
+        <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">›</button>
+      </div>
+    }
+  }
+</div>
+
+<!-- Customer Detail Modal -->
+@if (showDetail()) {
+  <div class="modal-overlay" (click)="showDetail.set(false)">
+    <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>تفاصيل العميل</h2>
+        <button class="modal-close" (click)="showDetail.set(false)">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 24px;">
+        @if (selectedCustomer(); as c) {
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+            <div><strong>الاسم:</strong> {{ c.name || '—' }}</div>
+            <div><strong>التليفون:</strong> {{ c.phone || '—' }}</div>
+            <div><strong>البريد الإلكتروني:</strong> {{ c.email || '—' }}</div>
+            <div><strong>الحالة:</strong> <span class="badge" [ngClass]="getStatusBadge(c.status)">{{ c.status }}</span></div>
+            <div><strong>إجمالي الطلبات:</strong> {{ c.totalOrders || 0 }}</div>
+            <div><strong>إجمالي المصروفات:</strong> {{ c.totalSpent | number:'1.2-2' }} ج.م</div>
+            <div><strong>تاريخ التسجيل:</strong> {{ c.createdAt | date:'yyyy/MM/dd' }}</div>
+            <div><strong>رصيد المحفظة:</strong> {{ c.walletBalance | number:'1.2-2' }} ج.م</div>
+          </div>
+
+          @if (c.addresses?.length) {
+            <h3 style="margin-bottom: 12px; color: var(--text-headline);">العناوين</h3>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px;">
+              @for (addr of c.addresses; track $index) {
+                <div style="background: var(--bg-card); padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+                  <strong>{{ addr.label || 'عنوان' }}:</strong> {{ addr.address || addr.street || '—' }}
+                  @if (addr.city) { - {{ addr.city }} }
+                </div>
+              }
+            </div>
+          }
+
+          <div style="display: flex; gap: 8px; justify-content: flex-end;">
+            @if (c.status === 'Active') {
+              <button class="btn btn-danger" (click)="deactivateCustomer(c.id)">تعطيل</button>
+            } @else {
+              <button class="btn btn-success" (click)="activateCustomer(c.id)">تفعيل</button>
+            }
+            <button class="btn btn-secondary" (click)="showDetail.set(false)">إغلاق</button>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

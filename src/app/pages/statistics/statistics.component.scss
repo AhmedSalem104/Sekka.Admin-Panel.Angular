@@ -1,0 +1,54 @@
+:host {
+  display: block;
+}
+
+.bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.bar-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.bar-label {
+  width: 60px;
+  font-size: 12px;
+  color: var(--text-caption);
+  text-align: left;
+  flex-shrink: 0;
+}
+
+.bar-track {
+  flex: 1;
+  height: 24px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: var(--radius-sm);
+  transition: width 0.6s ease;
+  min-width: 2px;
+}
+
+.bar-fill-revenue {
+  background: linear-gradient(90deg, #38A169, #68D391);
+}
+
+.bar-fill-orders {
+  background: linear-gradient(90deg, #FC5D01, #FF8534);
+}
+
+.bar-value {
+  width: 70px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-headline);
+  flex-shrink: 0;
+}

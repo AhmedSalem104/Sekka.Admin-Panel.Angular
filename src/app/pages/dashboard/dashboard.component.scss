@@ -1,0 +1,217 @@
+.page-subtitle {
+  font-size: 14px;
+  color: var(--text-caption);
+  margin-top: var(--space-xs);
+}
+
+.header-actions-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.live-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 6px 14px;
+  background: rgba(56, 161, 105, 0.1);
+  border: 1px solid rgba(56, 161, 105, 0.3);
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+  color: #38A169;
+
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    background: #38A169;
+    border-radius: 50%;
+    animation: blink 1.5s infinite;
+  }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+// Real-time Strip
+.realtime-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg) var(--space-xxl);
+  margin: var(--space-xl) 0;
+  overflow-x: auto;
+
+  @media (max-width: 768px) {
+    gap: var(--space-lg);
+    padding: var(--space-md) var(--space-lg);
+  }
+}
+
+.realtime-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 80px;
+
+  .realtime-label {
+    font-size: 12px;
+    color: var(--text-caption);
+    margin-bottom: 4px;
+    white-space: nowrap;
+  }
+
+  .realtime-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-headline);
+
+    &.primary { color: var(--primary); }
+    &.success { color: var(--success); }
+    &.warning { color: var(--warning); }
+    &.info { color: var(--info); }
+  }
+}
+
+.realtime-divider {
+  width: 1px;
+  height: 40px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+// Charts
+.charts-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-lg);
+  margin-top: var(--space-xl);
+
+  @media (max-width: 992px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chart-card {
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-lg);
+
+    h3 {
+      font-size: 16px;
+      margin: 0;
+    }
+  }
+
+  .chart-container {
+    height: 280px;
+    position: relative;
+  }
+}
+
+// KPI Section
+.section-title {
+  font-size: 18px;
+  margin: var(--space-xxl) 0 var(--space-lg);
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-lg);
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 576px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+
+  .kpi-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-md);
+  }
+
+  .kpi-label {
+    font-size: 13px;
+    color: var(--text-caption);
+  }
+
+  .kpi-trend {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+
+    &.positive {
+      color: #38A169;
+      background: rgba(56, 161, 105, 0.1);
+    }
+
+    &.negative {
+      color: #E53E3E;
+      background: rgba(229, 62, 62, 0.1);
+    }
+  }
+
+  .kpi-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-headline);
+    margin-bottom: var(--space-md);
+
+    small {
+      font-size: 14px;
+      color: var(--text-caption);
+      font-weight: 500;
+    }
+  }
+
+  .kpi-bar {
+    height: 6px;
+    background: var(--bg);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+    margin-bottom: var(--space-sm);
+
+    .kpi-bar-fill {
+      height: 100%;
+      border-radius: var(--radius-pill);
+      transition: width 1s ease;
+
+      &.primary { background: var(--primary); }
+      &.success { background: var(--success); }
+      &.info { background: var(--info); }
+      &.warning { background: var(--warning); }
+    }
+  }
+
+  .kpi-target {
+    font-size: 12px;
+    color: var(--text-caption);
+  }
+}
+
+.stat-sub {
+  font-size: 12px;
+  color: var(--text-caption);
+  margin-top: 2px;
+}

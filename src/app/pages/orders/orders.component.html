@@ -1,0 +1,215 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>الطلبات</h1>
+    <span class="badge badge-info">{{ totalCount }} طلب</span>
+  </div>
+
+  <!-- Filters Bar -->
+  <div class="filters-bar">
+    <div class="search-box" style="flex: 1; max-width: 400px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="ابحث برقم الطلب أو اسم العميل..." [(ngModel)]="search" (keyup.enter)="onSearch()" />
+    </div>
+    <select class="form-control" style="width: 180px; height: 44px;" [(ngModel)]="statusFilter" (change)="onSearch()">
+      <option value="">كل الحالات</option>
+      <option value="0">قيد الانتظار</option>
+      <option value="1">مقبول</option>
+      <option value="2">تم الاستلام</option>
+      <option value="3">في الطريق</option>
+      <option value="4">وصل</option>
+      <option value="5">تم التسليم</option>
+      <option value="6">ملغي</option>
+      <option value="7">مرتجع</option>
+    </select>
+    <button class="btn btn-secondary" (click)="exportOrders()">📥 تصدير</button>
+  </div>
+
+  <!-- Loading -->
+  @if (loading()) {
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">📦</div>
+      <h3>مفيش طلبات</h3>
+      <p>مفيش نتائج للبحث ده</p>
+    </div>
+  } @else {
+    <!-- Orders Table -->
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>رقم الطلب</th>
+            <th>العميل</th>
+            <th>السائق</th>
+            <th>الحالة</th>
+            <th>المبلغ</th>
+            <th>تاريخ الإنشاء</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr>
+              <td style="font-weight: 600; color: var(--primary);">#{{ item.orderNumber || item.id }}</td>
+              <td>{{ item.customerName || '—' }}</td>
+              <td>{{ item.driverName || 'لم يُعيّن' }}</td>
+              <td><span class="badge" [ngClass]="getStatusBadge(item.status)">{{ getStatusLabel(item.status) }}</span></td>
+              <td style="font-weight: 600;">{{ item.totalAmount | number:'1.2-2' }} ج.م</td>
+              <td>{{ item.createdAt | date:'yyyy/MM/dd HH:mm' }}</td>
+              <td>
+                <div class="action-buttons">
+                  <button class="btn btn-icon" title="عرض التفاصيل" (click)="viewOrder(item.id)">👁️</button>
+                  <button class="btn btn-icon" title="تعيين تلقائي" (click)="autoAssign(item.id)">🔄</button>
+                  <button class="btn btn-icon" title="تعيين سائق" (click)="openAssign(item.id)">👤</button>
+                  <button class="btn btn-icon" title="تغيير الحالة" (click)="openOverride(item.id)">⚡</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">‹</button>
+        @for (p of [].constructor(Math.min(totalPages, 10)); track $index) {
+          <button [class.active]="currentPage === $index + 1" (click)="onPageChange($index + 1)">{{ $index + 1 }}</button>
+        }
+        @if (totalPages > 10) {
+          <span style="padding: 0 8px; color: var(--text-caption);">...</span>
+          <button [class.active]="currentPage === totalPages" (click)="onPageChange(totalPages)">{{ totalPages }}</button>
+        }
+        <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">›</button>
+      </div>
+    }
+  }
+</div>
+
+<!-- Detail Modal -->
+@if (showDetail()) {
+  <div class="modal-overlay" (click)="showDetail.set(false)">
+    <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>تفاصيل الطلب</h2>
+        <button class="modal-close" (click)="showDetail.set(false)">✕</button>
+      </div>
+      <div class="modal-body">
+        @if (!selectedOrder()) {
+          <div class="loading-spinner"><div class="spinner"></div></div>
+        } @else {
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+            <div>
+              <p style="color: var(--text-caption); margin-bottom: 4px;">رقم الطلب</p>
+              <p style="font-weight: 600; color: var(--primary);">#{{ selectedOrder().orderNumber || selectedOrder().id }}</p>
+            </div>
+            <div>
+              <p style="color: var(--text-caption); margin-bottom: 4px;">العميل</p>
+              <p style="font-weight: 600;">{{ selectedOrder().customerName || '—' }}</p>
+            </div>
+            <div>
+              <p style="color: var(--text-caption); margin-bottom: 4px;">السائق</p>
+              <p style="font-weight: 600;">{{ selectedOrder().driverName || 'لم يُعيّن' }}</p>
+            </div>
+            <div>
+              <p style="color: var(--text-caption); margin-bottom: 4px;">الحالة</p>
+              <span class="badge" [ngClass]="getStatusBadge(selectedOrder().status)">{{ getStatusLabel(selectedOrder().status) }}</span>
+            </div>
+            <div>
+              <p style="color: var(--text-caption); margin-bottom: 4px;">المبلغ</p>
+              <p style="font-weight: 600;">{{ selectedOrder().totalAmount | number:'1.2-2' }} ج.م</p>
+            </div>
+            <div>
+              <p style="color: var(--text-caption); margin-bottom: 4px;">تاريخ الإنشاء</p>
+              <p>{{ selectedOrder().createdAt | date:'yyyy/MM/dd HH:mm' }}</p>
+            </div>
+          </div>
+
+          <!-- Timeline -->
+          <h3 style="margin-bottom: 16px; color: var(--text-headline);">المسار الزمني</h3>
+          @if (timeline().length === 0) {
+            <p style="color: var(--text-caption); text-align: center;">لا يوجد أحداث</p>
+          } @else {
+            <div class="timeline">
+              @for (event of timeline(); track $index) {
+                <div class="timeline-item">
+                  <div class="timeline-dot"></div>
+                  <div class="timeline-content">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                      <span class="badge" [ngClass]="getStatusBadge(event.status)">{{ getStatusLabel(event.status) }}</span>
+                      <span style="color: var(--text-caption); font-size: 12px;">{{ event.timestamp | date:'yyyy/MM/dd HH:mm:ss' }}</span>
+                    </div>
+                    <p style="color: var(--text-body); font-size: 14px;">{{ event.actor || '—' }}</p>
+                    @if (event.notes) {
+                      <p style="color: var(--text-caption); font-size: 13px; margin-top: 4px;">{{ event.notes }}</p>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Assign Driver Modal -->
+@if (showAssign()) {
+  <div class="modal-overlay" (click)="showAssign.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>تعيين سائق</h2>
+        <button class="modal-close" (click)="showAssign.set(false)">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">معرّف السائق</label>
+          <input type="text" class="form-control" placeholder="أدخل معرّف السائق..." [(ngModel)]="assignDriverId" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="showAssign.set(false)">إلغاء</button>
+        <button class="btn btn-primary" [disabled]="!assignDriverId" (click)="assignDriver()">تعيين</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Override Status Modal -->
+@if (showOverride()) {
+  <div class="modal-overlay" (click)="showOverride.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>تغيير حالة الطلب</h2>
+        <button class="modal-close" (click)="showOverride.set(false)">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">الحالة الجديدة</label>
+          <select class="form-control" [(ngModel)]="overrideStatus">
+            <option value="">اختر الحالة...</option>
+            <option value="0">قيد الانتظار</option>
+            <option value="1">مقبول</option>
+            <option value="2">تم الاستلام</option>
+            <option value="3">في الطريق</option>
+            <option value="4">وصل</option>
+            <option value="5">تم التسليم</option>
+            <option value="6">ملغي</option>
+            <option value="7">مرتجع</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">السبب</label>
+          <textarea class="form-control" rows="3" placeholder="اكتب سبب تغيير الحالة..." [(ngModel)]="overrideReason"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="showOverride.set(false)">إلغاء</button>
+        <button class="btn btn-primary" [disabled]="!overrideStatus || !overrideReason" (click)="submitOverride()">تأكيد التغيير</button>
+      </div>
+    </div>
+  </div>
+}

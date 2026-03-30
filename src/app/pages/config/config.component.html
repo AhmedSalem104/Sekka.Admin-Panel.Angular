@@ -1,0 +1,226 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>إعدادات المنصة</h1>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab" [class.active]="activeTab === 'settings'" (click)="activeTab = 'settings'">الإعدادات</button>
+    <button class="tab" [class.active]="activeTab === 'flags'" (click)="activeTab = 'flags'">الخصائص</button>
+    <button class="tab" [class.active]="activeTab === 'versions'" (click)="activeTab = 'versions'">الإصدارات</button>
+    <button class="tab" [class.active]="activeTab === 'maintenance'" (click)="activeTab = 'maintenance'">الصيانة</button>
+    <button class="tab" [class.active]="activeTab === 'commissions'" (click)="activeTab = 'commissions'">العمولات</button>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  } @else {
+
+    <!-- Settings Tab -->
+    @if (activeTab === 'settings') {
+      <div style="display: flex; justify-content: flex-end; margin-bottom: var(--space-lg);">
+        <button class="btn btn-primary" (click)="showCreateSetting.set(true)">+ إضافة إعداد</button>
+      </div>
+      @for (cat of getCategories(); track cat) {
+        <div class="card" style="margin-bottom: var(--space-lg); padding: var(--space-xl);">
+          <h3 style="margin-bottom: var(--space-md); text-transform: capitalize;">{{ cat }}</h3>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>المفتاح</th><th>القيمة</th><th>النوع</th><th>الوصف</th><th>إجراءات</th></tr></thead>
+              <tbody>
+                @for (s of getSettingsByCategory(cat); track s.key) {
+                  <tr>
+                    <td style="font-weight: 600; font-family: monospace;">{{ s.key }}</td>
+                    <td style="font-weight: 700; color: var(--primary);">{{ s.value }}</td>
+                    <td><span class="badge badge-info">{{ s.type }}</span></td>
+                    <td style="color: var(--text-caption);">{{ s.description }}</td>
+                    <td>
+                      <div style="display: flex; gap: 4px;">
+                        <button class="btn btn-sm btn-secondary" (click)="editSetting(s)">تعديل</button>
+                        <button class="btn btn-sm btn-danger" (click)="deleteSetting(s.key)">حذف</button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    }
+
+    <!-- Feature Flags Tab -->
+    @if (activeTab === 'flags') {
+      <div style="display: flex; justify-content: flex-end; margin-bottom: var(--space-lg);">
+        <button class="btn btn-primary" (click)="showCreateFlag.set(true)">+ إضافة ميزة</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead><tr><th>المفتاح</th><th>الوصف</th><th>النشر %</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+          <tbody>
+            @for (flag of featureFlags(); track flag.key) {
+              <tr>
+                <td style="font-weight: 600; font-family: monospace;">{{ flag.key }}</td>
+                <td>{{ flag.description }}</td>
+                <td>{{ flag.rolloutPercentage }}%</td>
+                <td>
+                  <span class="badge" [ngClass]="flag.isEnabled ? 'badge-success' : 'badge-inactive'">
+                    {{ flag.isEnabled ? 'مُفعّل' : 'مُعطّل' }}
+                  </span>
+                </td>
+                <td>
+                  <div style="display: flex; gap: 4px;">
+                    <button class="btn btn-sm" [ngClass]="flag.isEnabled ? 'btn-secondary' : 'btn-success'" (click)="toggleFlag(flag.key)">
+                      {{ flag.isEnabled ? 'تعطيل' : 'تفعيل' }}
+                    </button>
+                    <button class="btn btn-sm btn-danger" (click)="deleteFlag(flag.key)">حذف</button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- Versions Tab -->
+    @if (activeTab === 'versions') {
+      <div class="grid-2" style="gap: var(--space-lg);">
+        @for (v of appVersions(); track v.id) {
+          <div class="card" style="padding: var(--space-xl);">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+              <span style="font-size: 28px;">{{ v.platform === 'Android' ? '🤖' : '📱' }}</span>
+              <div>
+                <h3>{{ v.platform }}</h3>
+                <span class="badge badge-info">v{{ v.currentVersion }}</span>
+              </div>
+            </div>
+            <p><strong>الحد الأدنى:</strong> v{{ v.minimumVersion }}</p>
+            <p><strong>تحديث إجباري:</strong> {{ v.forceUpdate ? 'نعم' : 'لا' }}</p>
+            <p style="color: var(--text-caption); font-size: 13px;">{{ v.releaseNotes }}</p>
+            <p style="font-size: 12px; color: var(--text-caption); margin-top: 8px;">{{ v.releasedAt | date:'yyyy/MM/dd' }}</p>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Maintenance Tab -->
+    @if (activeTab === 'maintenance') {
+      <div class="card" style="padding: var(--space-xxl);">
+        @if (maintenance(); as m) {
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+            <div>
+              <h3>وضع الصيانة</h3>
+              <p style="color: var(--text-caption);">إيقاف التطبيق مؤقتاً للصيانة</p>
+            </div>
+            <span class="badge" [ngClass]="m.isEnabled ? 'badge-error' : 'badge-success'" style="font-size: 16px; padding: 8px 20px;">
+              {{ m.isEnabled ? '🔴 مُفعّل' : '🟢 غير مُفعّل' }}
+            </span>
+          </div>
+          @if (m.isEnabled) {
+            <div class="card" style="background: rgba(229, 62, 62, 0.05); border-color: var(--error); margin-bottom: 16px;">
+              @if (m.messageAr) { <p><strong>الرسالة:</strong> {{ m.messageAr }}</p> }
+              @if (m.scheduledEnd) { <p><strong>ينتهي:</strong> {{ m.scheduledEnd | date:'yyyy/MM/dd HH:mm' }}</p> }
+            </div>
+            <button class="btn btn-success" (click)="disableMaintenance()">إيقاف الصيانة</button>
+          } @else {
+            <button class="btn btn-danger" (click)="enableMaintenance()">تفعيل الصيانة</button>
+          }
+        }
+      </div>
+    }
+
+    <!-- Commissions Tab -->
+    @if (activeTab === 'commissions') {
+      <div class="table-container">
+        <table>
+          <thead><tr><th>الاسم</th><th>النوع</th><th>النسبة/المبلغ</th><th>الحد الأدنى</th><th>الحد الأقصى</th><th>نشط</th><th>إجراءات</th></tr></thead>
+          <tbody>
+            @for (c of commissions(); track c.id) {
+              <tr>
+                <td style="font-weight: 600;">{{ c.name }}</td>
+                <td><span class="badge badge-info">{{ c.type === 'partner' ? 'شريك' : 'سائق' }}</span></td>
+                <td style="font-weight: 700; color: var(--primary);">{{ c.rate }}{{ c.isPercentage ? '%' : ' ج.م' }}</td>
+                <td>{{ c.minAmount }} ج.م</td>
+                <td>{{ c.maxAmount || '—' }}</td>
+                <td>
+                  <span class="badge" [ngClass]="c.isActive ? 'badge-success' : 'badge-inactive'">
+                    {{ c.isActive ? 'نشط' : 'معطل' }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn btn-sm" [ngClass]="c.isActive ? 'btn-secondary' : 'btn-success'" (click)="toggleCommission(c.id)">
+                    {{ c.isActive ? 'تعطيل' : 'تفعيل' }}
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>
+
+<!-- Create Setting Modal -->
+@if (showCreateSetting()) {
+  <div class="modal-overlay" (click)="showCreateSetting.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h2 style="margin-bottom: 16px;">إضافة إعداد جديد</h2>
+      <div class="form-group">
+        <label>المفتاح</label>
+        <input type="text" class="form-control" [(ngModel)]="newSetting.key" placeholder="setting_key" />
+      </div>
+      <div class="form-group">
+        <label>القيمة</label>
+        <input type="text" class="form-control" [(ngModel)]="newSetting.value" />
+      </div>
+      <div class="form-group">
+        <label>النوع</label>
+        <select class="form-control" [(ngModel)]="newSetting.type">
+          <option value="string">نص</option>
+          <option value="int">رقم</option>
+          <option value="decimal">رقم عشري</option>
+          <option value="bool">نعم/لا</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>الفئة</label>
+        <input type="text" class="form-control" [(ngModel)]="newSetting.category" placeholder="general" />
+      </div>
+      <div class="form-group">
+        <label>الوصف</label>
+        <input type="text" class="form-control" [(ngModel)]="newSetting.description" />
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-primary" (click)="createSetting()" [disabled]="!newSetting.key">إنشاء</button>
+        <button class="btn btn-secondary" (click)="showCreateSetting.set(false)">إلغاء</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Create Flag Modal -->
+@if (showCreateFlag()) {
+  <div class="modal-overlay" (click)="showCreateFlag.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h2 style="margin-bottom: 16px;">إضافة ميزة جديدة</h2>
+      <div class="form-group">
+        <label>المفتاح</label>
+        <input type="text" class="form-control" [(ngModel)]="newFlag.key" placeholder="feature_key" />
+      </div>
+      <div class="form-group">
+        <label>الوصف</label>
+        <input type="text" class="form-control" [(ngModel)]="newFlag.description" />
+      </div>
+      <div class="form-group">
+        <label>نسبة النشر %</label>
+        <input type="number" class="form-control" [(ngModel)]="newFlag.rolloutPercentage" min="0" max="100" />
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-primary" (click)="createFlag()" [disabled]="!newFlag.key">إنشاء</button>
+        <button class="btn btn-secondary" (click)="showCreateFlag.set(false)">إلغاء</button>
+      </div>
+    </div>
+  </div>
+}

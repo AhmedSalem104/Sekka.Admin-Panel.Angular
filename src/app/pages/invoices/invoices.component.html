@@ -1,0 +1,196 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>الفواتير</h1>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span class="badge badge-info">{{ totalCount }} فاتورة</span>
+      <button class="btn btn-primary" (click)="openCreate()">+ إنشاء فاتورة</button>
+    </div>
+  </div>
+
+  <div class="filters-bar">
+    <div class="search-box" style="flex: 1; max-width: 400px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="ابحث برقم الفاتورة..." [(ngModel)]="search" (keyup.enter)="onSearch()" />
+    </div>
+    <select class="form-control" style="width: 180px; height: 44px;" [(ngModel)]="statusFilter" (change)="onSearch()">
+      <option value="">كل الحالات</option>
+      <option value="0">مسودة</option>
+      <option value="1">صادرة</option>
+      <option value="2">مدفوعة</option>
+      <option value="3">متأخرة</option>
+      <option value="4">ملغاة</option>
+    </select>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">🧾</div>
+      <h3>مفيش فواتير</h3>
+      <p>مفيش نتائج للبحث ده</p>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>رقم الفاتورة</th>
+            <th>الشريك</th>
+            <th>المبلغ</th>
+            <th>الضريبة</th>
+            <th>الإجمالي</th>
+            <th>الحالة</th>
+            <th>تاريخ الاستحقاق</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr>
+              <td style="font-weight: 600; color: var(--primary); cursor: pointer;" (click)="viewInvoice(item.id)">#{{ item.invoiceNumber || item.id }}</td>
+              <td style="font-weight: 600;">{{ item.partnerName || '—' }}</td>
+              <td style="font-weight: 700;">{{ item.amount | number:'1.2-2' }} ج.م</td>
+              <td>{{ item.tax | number:'1.2-2' }} ج.م</td>
+              <td style="font-weight: 700;">{{ item.totalAmount | number:'1.2-2' }} ج.م</td>
+              <td><span class="badge" [ngClass]="getStatusBadge(item.status)">{{ getStatusLabel(item.status) }}</span></td>
+              <td [style.color]="item.status === 3 ? 'var(--error)' : ''">{{ item.dueDate | date:'yyyy/MM/dd' }}</td>
+              <td>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                  @if (item.status === 0 || item.status === 1) {
+                    <button class="btn btn-sm btn-success" (click)="markPaid(item.id)">تسجيل دفع</button>
+                  }
+                  @if (item.status !== 4 && item.status !== 2) {
+                    <button class="btn btn-sm btn-danger" (click)="cancelInvoice(item.id)">إلغاء</button>
+                  }
+                  <button class="btn btn-sm btn-outline" (click)="downloadPdf(item.id)">تحميل PDF</button>
+                  <button class="btn btn-sm btn-outline" (click)="sendEmail(item.id)">إرسال بالإيميل</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">‹</button>
+        @for (p of [].constructor(Math.min(totalPages, 10)); track $index) {
+          <button [class.active]="currentPage === $index + 1" (click)="onPageChange($index + 1)">{{ $index + 1 }}</button>
+        }
+        <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">›</button>
+      </div>
+    }
+  }
+</div>
+
+<!-- Detail Modal -->
+@if (showDetail()) {
+  <div class="modal-overlay" (click)="showDetail.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 700px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">تفاصيل الفاتورة #{{ selectedInvoice()?.invoiceNumber || selectedInvoice()?.id }}</h2>
+        <button class="btn btn-sm btn-outline" (click)="showDetail.set(false)">✕</button>
+      </div>
+
+      @if (selectedInvoice(); as inv) {
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+          <div><strong>الشريك:</strong> {{ inv.partnerName || '—' }}</div>
+          <div><strong>الحالة:</strong> <span class="badge" [ngClass]="getStatusBadge(inv.status)">{{ getStatusLabel(inv.status) }}</span></div>
+          <div><strong>المبلغ:</strong> {{ inv.amount | number:'1.2-2' }} ج.م</div>
+          <div><strong>الضريبة:</strong> {{ inv.tax | number:'1.2-2' }} ج.م</div>
+          <div><strong>الإجمالي:</strong> {{ inv.totalAmount | number:'1.2-2' }} ج.م</div>
+          <div><strong>تاريخ الاستحقاق:</strong> {{ inv.dueDate | date:'yyyy/MM/dd' }}</div>
+          <div><strong>ملاحظات:</strong> {{ inv.notes || '—' }}</div>
+        </div>
+
+        @if (inv.lineItems?.length) {
+          <h3 style="margin-bottom: 12px;">بنود الفاتورة</h3>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>الوصف</th>
+                  <th>الكمية</th>
+                  <th>سعر الوحدة</th>
+                  <th>الإجمالي</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (line of inv.lineItems; track $index) {
+                  <tr>
+                    <td>{{ line.description }}</td>
+                    <td>{{ line.quantity }}</td>
+                    <td>{{ line.unitPrice | number:'1.2-2' }} ج.م</td>
+                    <td style="font-weight: 700;">{{ (line.quantity * line.unitPrice) | number:'1.2-2' }} ج.م</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        <div style="display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end;">
+          @if (inv.status === 0 || inv.status === 1) {
+            <button class="btn btn-success" (click)="markPaid(inv.id)">تسجيل دفع</button>
+          }
+          @if (inv.status !== 4 && inv.status !== 2) {
+            <button class="btn btn-danger" (click)="cancelInvoice(inv.id)">إلغاء</button>
+          }
+          <button class="btn btn-outline" (click)="downloadPdf(inv.id)">تحميل PDF</button>
+          <button class="btn btn-outline" (click)="sendEmail(inv.id)">إرسال بالإيميل</button>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- Create Modal -->
+@if (showCreate()) {
+  <div class="modal-overlay" (click)="showCreate.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 600px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">إنشاء فاتورة جديدة</h2>
+        <button class="btn btn-sm btn-outline" (click)="showCreate.set(false)">✕</button>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label>رقم الشريك (Partner ID)</label>
+        <input class="form-control" [(ngModel)]="newInvoice.partnerId" placeholder="أدخل رقم الشريك" />
+      </div>
+
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label>تاريخ الاستحقاق</label>
+        <input class="form-control" type="date" [(ngModel)]="newInvoice.dueDate" />
+      </div>
+
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label>ملاحظات</label>
+        <textarea class="form-control" [(ngModel)]="newInvoice.notes" rows="2" placeholder="ملاحظات اختيارية"></textarea>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <label style="font-weight: 600;">بنود الفاتورة</label>
+          <button class="btn btn-sm btn-outline" (click)="addLineItem()">+ إضافة بند</button>
+        </div>
+        @for (line of newInvoice.lineItems; track $index) {
+          <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
+            <input class="form-control" style="flex: 2;" [(ngModel)]="line.description" placeholder="الوصف" />
+            <input class="form-control" style="flex: 0.7;" type="number" [(ngModel)]="line.quantity" placeholder="الكمية" min="1" />
+            <input class="form-control" style="flex: 1;" type="number" [(ngModel)]="line.unitPrice" placeholder="سعر الوحدة" min="0" />
+            @if (newInvoice.lineItems.length > 1) {
+              <button class="btn btn-sm btn-danger" (click)="removeLineItem($index)">✕</button>
+            }
+          </div>
+        }
+      </div>
+
+      <div style="display: flex; gap: 12px; justify-content: flex-end;">
+        <button class="btn btn-outline" (click)="showCreate.set(false)">إلغاء</button>
+        <button class="btn btn-primary" (click)="createInvoice()" [disabled]="!newInvoice.partnerId || !newInvoice.dueDate">إنشاء الفاتورة</button>
+      </div>
+    </div>
+  </div>
+}

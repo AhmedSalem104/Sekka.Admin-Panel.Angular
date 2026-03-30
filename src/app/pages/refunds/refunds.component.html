@@ -1,0 +1,161 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>الاستردادات</h1>
+    <span class="badge badge-info">{{ totalCount }} طلب استرداد</span>
+  </div>
+
+  <!-- Stats -->
+  @if (stats(); as s) {
+    <div class="stats-grid" style="margin-bottom: var(--space-xl);">
+      <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(236, 201, 75, 0.1);">⏳</div>
+        <div class="stat-content">
+          <div class="stat-label">قيد الانتظار</div>
+          <div class="stat-value">{{ s.totalPending }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(56, 161, 105, 0.1);">✅</div>
+        <div class="stat-content">
+          <div class="stat-label">تم التنفيذ</div>
+          <div class="stat-value">{{ s.totalProcessed }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(229, 62, 62, 0.1);">💸</div>
+        <div class="stat-content">
+          <div class="stat-label">إجمالي المسترد</div>
+          <div class="stat-value">{{ s.totalRefundedAmount?.toLocaleString() }} ج.م</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(49, 130, 206, 0.1);">📊</div>
+        <div class="stat-content">
+          <div class="stat-label">معدل الاسترداد</div>
+          <div class="stat-value">{{ s.refundRate }}%</div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <div class="filters-bar">
+    <div class="search-box" style="flex: 1; max-width: 400px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="ابحث..." [(ngModel)]="search" (keyup.enter)="onSearch()" />
+    </div>
+    <select class="form-control" style="width: 160px; height: 44px;" [(ngModel)]="statusFilter" (change)="onSearch()">
+      <option value="">كل الحالات</option>
+      <option value="0">قيد الانتظار</option>
+      <option value="1">معتمد</option>
+      <option value="2">تم التنفيذ</option>
+      <option value="3">مرفوض</option>
+    </select>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">↩️</div>
+      <h3>مفيش استردادات</h3>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>رقم الطلب</th>
+            <th>العميل</th>
+            <th>المبلغ</th>
+            <th>السبب</th>
+            <th>الحالة</th>
+            <th>التاريخ</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr style="cursor: pointer;" (click)="viewRefund(item.id)">
+              <td style="font-weight: 600; color: var(--primary);">{{ item.orderNumber }}</td>
+              <td>{{ item.customerName || '—' }}</td>
+              <td style="font-weight: 700; color: var(--error);">{{ item.amount?.toLocaleString() }} ج.م</td>
+              <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">{{ item.reason }}</td>
+              <td><span class="badge" [ngClass]="getStatusBadge(item.status)">{{ item.statusName }}</span></td>
+              <td>{{ item.requestedAt | date:'yyyy/MM/dd' }}</td>
+              <td (click)="$event.stopPropagation()">
+                <div style="display: flex; gap: 4px;">
+                  @if (item.status === 0) {
+                    <button class="btn btn-sm btn-success" (click)="openApprove(item)">موافقة</button>
+                    <button class="btn btn-sm btn-danger" (click)="rejectRefund(item.id)">رفض</button>
+                  }
+                  @if (item.status === 1) {
+                    <button class="btn btn-sm btn-primary" (click)="processRefund(item.id)">تنفيذ</button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">‹</button>
+        @for (p of [].constructor(Math.min(totalPages, 10)); track $index) {
+          <button [class.active]="currentPage === $index + 1" (click)="onPageChange($index + 1)">{{ $index + 1 }}</button>
+        }
+        <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">›</button>
+      </div>
+    }
+  }
+</div>
+
+<!-- Refund Detail Modal -->
+@if (showDetail()) {
+  <div class="modal-overlay" (click)="showDetail.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      @if (selectedRefund(); as r) {
+        <h2 style="margin-bottom: 16px;">تفاصيل الاسترداد</h2>
+        <p><strong>الطلب:</strong> {{ r.orderNumber }}</p>
+        <p><strong>العميل:</strong> {{ r.customerName }} ({{ r.customerPhone }})</p>
+        <p><strong>المبلغ:</strong> <span style="color: var(--error); font-weight: 700;">{{ r.amount }} ج.م</span></p>
+        <p><strong>المبلغ الأصلي:</strong> {{ r.originalPaymentAmount }} ج.م</p>
+        <p><strong>السبب:</strong> {{ r.reason }}</p>
+        <p><strong>طريقة الاسترداد:</strong> {{ r.refundMethod }}</p>
+        <p><strong>الحالة:</strong> <span class="badge" [ngClass]="getStatusBadge(r.status)">{{ r.statusName }}</span></p>
+        <button class="btn btn-secondary" style="margin-top: 16px;" (click)="showDetail.set(false)">إغلاق</button>
+      } @else {
+        <div class="loading-spinner"><div class="spinner"></div></div>
+      }
+    </div>
+  </div>
+}
+
+<!-- Approve Modal -->
+@if (showApprove()) {
+  <div class="modal-overlay" (click)="showApprove.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h2 style="margin-bottom: 16px;">الموافقة على الاسترداد</h2>
+      <div class="form-group">
+        <label>المبلغ (ج.م)</label>
+        <input type="number" class="form-control" [(ngModel)]="approveAmount" />
+      </div>
+      <div class="form-group">
+        <label>طريقة الاسترداد</label>
+        <select class="form-control" [(ngModel)]="approveMethod">
+          <option value="Wallet">المحفظة</option>
+          <option value="OriginalMethod">الطريقة الأصلية</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>ملاحظات</label>
+        <textarea class="form-control" [(ngModel)]="approveNotes" placeholder="ملاحظات..."></textarea>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-success" (click)="submitApprove()">تأكيد الموافقة</button>
+        <button class="btn btn-secondary" (click)="showApprove.set(false)">إلغاء</button>
+      </div>
+    </div>
+  </div>
+}

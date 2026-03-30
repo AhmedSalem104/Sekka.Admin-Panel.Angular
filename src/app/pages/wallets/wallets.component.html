@@ -1,0 +1,196 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>المحافظ</h1>
+    <span class="badge badge-info">{{ totalCount }} محفظة</span>
+  </div>
+
+  <!-- Stats -->
+  @if (stats(); as s) {
+    <div class="stats-grid" style="margin-bottom: var(--space-xl);">
+      <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(56, 161, 105, 0.1);">💰</div>
+        <div class="stat-content">
+          <div class="stat-label">إجمالي الأرصدة</div>
+          <div class="stat-value">{{ s.totalBalance?.toLocaleString() }} ج.م</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(229, 62, 62, 0.1);">🔒</div>
+        <div class="stat-content">
+          <div class="stat-label">أرصدة مجمدة</div>
+          <div class="stat-value">{{ s.totalFrozenBalance?.toLocaleString() }} ج.م</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(49, 130, 206, 0.1);">👛</div>
+        <div class="stat-content">
+          <div class="stat-label">إجمالي المحافظ</div>
+          <div class="stat-value">{{ s.totalWallets }}</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(252, 93, 1, 0.1);">📊</div>
+        <div class="stat-content">
+          <div class="stat-label">معاملات اليوم</div>
+          <div class="stat-value">{{ s.todayTransactions?.count || 0 }}</div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <div class="filters-bar">
+    <div class="search-box" style="flex: 1; max-width: 400px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="ابحث بالاسم أو التليفون..." [(ngModel)]="search" (keyup.enter)="onSearch()" />
+    </div>
+    <select class="form-control" style="width: 160px; height: 44px;" [(ngModel)]="ownerTypeFilter" (change)="onSearch()">
+      <option value="">كل الأنواع</option>
+      <option value="driver">سائق</option>
+      <option value="customer">عميل</option>
+      <option value="partner">شريك</option>
+    </select>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-spinner"><div class="spinner"></div></div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">👛</div>
+      <h3>مفيش محافظ</h3>
+      <p>مفيش نتائج للبحث ده</p>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>المالك</th>
+            <th>النوع</th>
+            <th>الرصيد</th>
+            <th>الحالة</th>
+            <th>آخر عملية</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr style="cursor: pointer;" (click)="viewWallet(item.id)">
+              <td>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div class="avatar avatar-sm">{{ item.ownerName?.charAt(0) || 'م' }}</div>
+                  <div>
+                    <div style="font-weight: 600; color: var(--text-headline);">{{ item.ownerName || '—' }}</div>
+                    <div style="font-size: 12px; color: var(--text-caption);" dir="ltr">{{ item.ownerPhone }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="badge badge-info">{{ item.ownerType === 'driver' ? 'سائق' : item.ownerType === 'customer' ? 'عميل' : 'شريك' }}</span>
+              </td>
+              <td style="font-weight: 700; color: var(--success);">{{ item.balance?.toLocaleString() }} ج.م</td>
+              <td>
+                <span class="badge" [ngClass]="item.isFrozen ? 'badge-error' : 'badge-success'">
+                  {{ item.isFrozen ? 'مجمد 🔒' : 'نشط' }}
+                </span>
+              </td>
+              <td>{{ item.lastTransactionAt | date:'yyyy/MM/dd HH:mm' }}</td>
+              <td (click)="$event.stopPropagation()">
+                <div style="display: flex; gap: 6px;">
+                  <button class="btn btn-sm btn-primary" (click)="openAdjust(item.id)">تعديل الرصيد</button>
+                  @if (item.isFrozen) {
+                    <button class="btn btn-sm btn-success" (click)="unfreezeWallet(item.id)">فك التجميد</button>
+                  } @else {
+                    <button class="btn btn-sm btn-danger" (click)="freezeWallet(item.id)">تجميد</button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages > 1) {
+      <div class="pagination">
+        <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">‹</button>
+        @for (p of [].constructor(Math.min(totalPages, 10)); track $index) {
+          <button [class.active]="currentPage === $index + 1" (click)="onPageChange($index + 1)">{{ $index + 1 }}</button>
+        }
+        <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">›</button>
+      </div>
+    }
+  }
+</div>
+
+<!-- Wallet Detail Modal -->
+@if (showDetail()) {
+  <div class="modal-overlay" (click)="showDetail.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 600px;">
+      @if (selectedWallet(); as w) {
+        <h2 style="margin-bottom: 16px;">تفاصيل المحفظة</h2>
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+          <div class="avatar">{{ w.ownerName?.charAt(0) }}</div>
+          <div>
+            <div style="font-weight: 700; color: var(--text-headline);">{{ w.ownerName }}</div>
+            <div style="font-size: 13px; color: var(--text-caption);" dir="ltr">{{ w.ownerPhone }}</div>
+          </div>
+        </div>
+        <div class="grid-2" style="gap: 12px; margin-bottom: 16px;">
+          <div class="card" style="padding: 12px; text-align: center;">
+            <div style="font-size: 12px; color: var(--text-caption);">الرصيد</div>
+            <div style="font-size: 22px; font-weight: 700; color: var(--success);">{{ w.balance?.toLocaleString() }} ج.م</div>
+          </div>
+          <div class="card" style="padding: 12px; text-align: center;">
+            <div style="font-size: 12px; color: var(--text-caption);">إجمالي الإيداعات</div>
+            <div style="font-size: 22px; font-weight: 700;">{{ w.totalCredits?.toLocaleString() }} ج.م</div>
+          </div>
+        </div>
+        @if (w.recentTransactions?.length) {
+          <h4 style="margin-bottom: 8px;">آخر المعاملات</h4>
+          @for (txn of w.recentTransactions; track txn.id) {
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+              <div>
+                <div style="font-weight: 600;">{{ txn.description }}</div>
+                <div style="font-size: 12px; color: var(--text-caption);">{{ txn.createdAt | date:'yyyy/MM/dd HH:mm' }}</div>
+              </div>
+              <div [style.color]="txn.type === 'Credit' ? 'var(--success)' : 'var(--error)'" style="font-weight: 700;">
+                {{ txn.type === 'Credit' ? '+' : '-' }}{{ txn.amount }} ج.م
+              </div>
+            </div>
+          }
+        }
+        <button class="btn btn-secondary" style="margin-top: 16px;" (click)="showDetail.set(false)">إغلاق</button>
+      } @else {
+        <div class="loading-spinner"><div class="spinner"></div></div>
+      }
+    </div>
+  </div>
+}
+
+<!-- Adjust Balance Modal -->
+@if (showAdjust()) {
+  <div class="modal-overlay" (click)="showAdjust.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h2 style="margin-bottom: 16px;">تعديل رصيد المحفظة</h2>
+      <div class="form-group">
+        <label>النوع</label>
+        <select class="form-control" [(ngModel)]="adjustType">
+          <option value="Credit">إيداع (Credit)</option>
+          <option value="Debit">خصم (Debit)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>المبلغ (ج.م)</label>
+        <input type="number" class="form-control" [(ngModel)]="adjustAmount" min="0" />
+      </div>
+      <div class="form-group">
+        <label>السبب</label>
+        <textarea class="form-control" [(ngModel)]="adjustReason" placeholder="سبب التعديل..."></textarea>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-primary" (click)="submitAdjust()" [disabled]="!adjustAmount || !adjustReason">تأكيد</button>
+        <button class="btn btn-secondary" (click)="showAdjust.set(false)">إلغاء</button>
+      </div>
+    </div>
+  </div>
+}

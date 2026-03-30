@@ -27,7 +27,14 @@ export class PartnersComponent implements OnInit {
   showDetail = signal(false);
   selectedPartner = signal<any>(null);
 
-  ngOnInit() { this.loadData(); }
+  partnerStats = signal<any>(null);
+  pendingVerification = signal<any[]>([]);
+  showPendingList = signal(false);
+
+  ngOnInit() {
+    this.loadData();
+    this.loadStats();
+  }
 
   loadData() {
     this.loading.set(true);
@@ -90,6 +97,43 @@ export class PartnersComponent implements OnInit {
     if (!reason) return;
     this.http.put<any>(`${this.apiUrl}/partners/${id}/reject`, { reason }).subscribe({
       next: (res) => { if (res.isSuccess) this.loadData(); }
+    });
+  }
+
+  loadStats() {
+    this.http.get<any>(`${this.apiUrl}/partners/stats`).subscribe({
+      next: (res) => { if (res.isSuccess) this.partnerStats.set(res.data); }
+    });
+  }
+
+  loadPendingVerification() {
+    this.http.get<any>(`${this.apiUrl}/partners/pending-verification`).subscribe({
+      next: (res) => {
+        if (res.isSuccess) {
+          this.pendingVerification.set(res.data || []);
+          this.showPendingList.set(true);
+        }
+      }
+    });
+  }
+
+  viewPartnerOrders(id: string) {
+    this.http.get<any>(`${this.apiUrl}/partners/${id}/orders?pageNumber=1&pageSize=10`).subscribe({
+      next: (res) => {
+        if (res.isSuccess) {
+          // Data available in res.data
+        }
+      }
+    });
+  }
+
+  viewPartnerSettlements(id: string) {
+    this.http.get<any>(`${this.apiUrl}/partners/${id}/settlements?pageNumber=1&pageSize=10`).subscribe({
+      next: (res) => {
+        if (res.isSuccess) {
+          // Data available in res.data
+        }
+      }
     });
   }
 

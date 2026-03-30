@@ -20,6 +20,9 @@ export class SosComponent implements OnInit {
   showDetail = signal(false);
   selectedSos = signal<any>(null);
   activeCount = signal<any>(null);
+  sosStats = signal<any>(null);
+  heatmap = signal<any[]>([]);
+  responseTimes = signal<any>(null);
   search = '';
   statusFilter = '';
   priorityFilter = '';
@@ -30,6 +33,9 @@ export class SosComponent implements OnInit {
   ngOnInit() {
     this.loadData();
     this.loadActiveCount();
+    this.loadSosStats();
+    this.loadHeatmap();
+    this.loadResponseTimes();
   }
 
   loadData() {
@@ -52,8 +58,44 @@ export class SosComponent implements OnInit {
     });
   }
 
+  loadSosStats() {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const to = now.toISOString().split('T')[0];
+    this.http.get<any>(`${this.apiUrl}/sos/stats?fromDate=${from}&toDate=${to}`).subscribe({
+      next: (res) => { if (res.isSuccess) this.sosStats.set(res.data); }
+    });
+  }
+
+  loadHeatmap() {
+    this.http.get<any>(`${this.apiUrl}/sos/heatmap`).subscribe({
+      next: (res) => { if (res.isSuccess) this.heatmap.set(res.data || []); }
+    });
+  }
+
+  loadResponseTimes() {
+    this.http.get<any>(`${this.apiUrl}/sos/response-times`).subscribe({
+      next: (res) => { if (res.isSuccess) this.responseTimes.set(res.data); }
+    });
+  }
+
+  escalateSos(id: string) {
+    const reason = prompt('سبب التصعيد:');
+    if (!reason) return;
+    this.http.put<any>(`${this.apiUrl}/sos/${id}/escalate`, { reason }).subscribe({
+      next: (res) => { if (res.isSuccess) this.loadData(); }
+    });
+  }
+
+  markFalseAlarm(id: string) {
+    if (!confirm('تأكيد: تسجيل إنذار كاذب؟')) return;
+    this.http.put<any>(`${this.apiUrl}/sos/${id}/mark-false-alarm`, {}).subscribe({
+      next: (res) => { if (res.isSuccess) this.loadData(); }
+    });
+  }
+
   loadActiveCount() {
-    this.http.get<any>(`${this.apiUrl}/sos/active-count`).subscribe({
+    this.http.get<any>(`${this.apiUrl}/sos/active`).subscribe({
       next: (res) => {
         if (res.isSuccess) {
           this.activeCount.set(res.data);

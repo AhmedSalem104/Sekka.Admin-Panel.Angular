@@ -18,6 +18,8 @@ export class BlacklistComponent implements OnInit {
   items = signal<any[]>([]);
   loading = signal(true);
   showAdd = signal(false);
+  blacklistStats = signal<any>(null);
+  reports = signal<any[]>([]);
   newEntry = { userId: '', userType: 'driver', reason: '', expiresAt: '' };
   search = '';
   typeFilter = '';
@@ -27,6 +29,7 @@ export class BlacklistComponent implements OnInit {
 
   ngOnInit() {
     this.loadData();
+    this.loadStats();
   }
 
   loadData() {
@@ -79,6 +82,28 @@ export class BlacklistComponent implements OnInit {
   onPageChange(page: number) {
     this.currentPage = page;
     this.loadData();
+  }
+
+  loadStats() {
+    this.http.get<any>(`${this.apiUrl}/blacklist/stats`).subscribe({
+      next: (res) => { if (res.isSuccess) this.blacklistStats.set(res.data); }
+    });
+  }
+
+  loadReports() {
+    this.http.get<any>(`${this.apiUrl}/blacklist/reports`).subscribe({
+      next: (res) => { if (res.isSuccess) this.reports.set(res.data); }
+    });
+  }
+
+  verifyPhone(phone: string) {
+    this.http.post<any>(`${this.apiUrl}/blacklist/verify/${phone}`, {}).subscribe({
+      next: (res) => {
+        if (res.isSuccess) {
+          alert(JSON.stringify(res.data));
+        }
+      }
+    });
   }
 
   getTypeBadge(type: string): string {

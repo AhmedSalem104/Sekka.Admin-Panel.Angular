@@ -23,6 +23,8 @@ export class InvoicesComponent implements OnInit {
   totalPages = 1;
   totalCount = 0;
 
+  invoiceStats = signal<any>(null);
+
   // Detail
   showDetail = signal(false);
   selectedInvoice = signal<any>(null);
@@ -38,6 +40,7 @@ export class InvoicesComponent implements OnInit {
 
   ngOnInit() {
     this.loadData();
+    this.loadStats();
   }
 
   loadData() {
@@ -57,6 +60,19 @@ export class InvoicesComponent implements OnInit {
       },
       error: () => this.loading.set(false)
     });
+  }
+
+  loadStats() {
+    this.http.get<any>(`${this.apiUrl}/stats`).subscribe({
+      next: (res) => { if (res.isSuccess) this.invoiceStats.set(res.data); }
+    });
+  }
+
+  exportInvoices() {
+    const now = new Date();
+    const fromDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const toDate = now.toISOString();
+    window.open(`${this.apiUrl}/export?format=csv&fromDate=${fromDate}&toDate=${toDate}`, '_blank');
   }
 
   onSearch() {
@@ -123,7 +139,7 @@ export class InvoicesComponent implements OnInit {
   }
 
   createInvoice() {
-    this.http.post<any>(this.apiUrl, this.newInvoice).subscribe({
+    this.http.post<any>(`${this.apiUrl}/generate`, this.newInvoice).subscribe({
       next: (res) => {
         if (res.isSuccess) {
           this.showCreate.set(false);
@@ -138,14 +154,7 @@ export class InvoicesComponent implements OnInit {
 
   // Mark paid
   markPaid(id: string) {
-    const paymentMethod = prompt('طريقة الدفع (مثال: كاش، تحويل بنكي):');
-    if (!paymentMethod) return;
-    const transactionReference = prompt('رقم المعاملة:') || '';
-
-    this.http.put<any>(`${this.apiUrl}/${id}/mark-paid`, {
-      paymentMethod,
-      transactionReference
-    }).subscribe({
+    this.http.put<any>(`${this.apiUrl}/${id}/status`, { status: 'Paid' }).subscribe({
       next: (res) => {
         if (res.isSuccess) {
           this.loadData();
@@ -163,7 +172,7 @@ export class InvoicesComponent implements OnInit {
     const reason = prompt('سبب الإلغاء:');
     if (!reason) return;
 
-    this.http.put<any>(`${this.apiUrl}/${id}/cancel`, { reason }).subscribe({
+    this.http.put<any>(`${this.apiUrl}/${id}/status`, { status: 'Cancelled', reason }).subscribe({
       next: (res) => {
         if (res.isSuccess) {
           this.loadData();
@@ -179,6 +188,20 @@ export class InvoicesComponent implements OnInit {
   // Download PDF
   downloadPdf(id: string) {
     window.open(`${this.apiUrl}/${id}/download`, '_blank');
+  }
+
+  generateBulk() {
+    this.http.post<any>(`${this.apiUrl}/generate-bulk`, {}).subscribe({
+      next: (res) => {
+        if (res.isSuccess) {
+          alert('تم إنشاء الفواتير بنجاح');
+          this.loadData();
+        } else {
+          alert(res.message || 'حصل خطأ');
+        }
+      },
+      error: () => alert('حصل خطأ في إنشاء الفواتير')
+    });
   }
 
   // Send email

@@ -17,53 +17,57 @@ export class InsightsComponent implements OnInit {
   activeTab = 'insights';
   loading = signal(true);
 
-  insights = signal<any[]>([]);
-  demandForecast = signal<any[]>([]);
-  churnRisk = signal<any[]>([]);
-  revenueOptimization = signal<any>(null);
-  supplyDemand = signal<any>(null);
-  anomalies = signal<any[]>([]);
-  cohortAnalysis = signal<any>(null);
+  // NEW API endpoints
+  overview = signal<any>(null);          // GET /insights/overview
+  heatmapData = signal<any>(null);       // GET /insights/heatmap
+  trends = signal<any>(null);            // GET /insights/trends
+  engagement = signal<any>(null);        // GET /insights/engagement-distribution
+  rfmAnalysis = signal<any>(null);       // GET /insights/rfm-analysis
+  behaviorSummary = signal<any>(null);   // GET /insights/behavior-summary
+  categoryPerformance = signal<any>(null); // GET /insights/category-performance
 
   ngOnInit() { this.loadAll(); }
 
   loadAll() {
     this.loading.set(true);
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const to = now.toISOString().split('T')[0];
 
-    // Business Insights
-    this.http.get<any>(`${this.apiUrl}/insights`).subscribe({
-      next: (res) => { if (res.isSuccess) this.insights.set(res.data || []); }
+    // 1. Overview
+    this.http.get<any>(`${this.apiUrl}/insights/overview?period=month`).subscribe({
+      next: (res) => { if (res.isSuccess) this.overview.set(res.data); }
     });
 
-    // Demand Forecast
-    this.http.get<any>(`${this.apiUrl}/insights/demand-forecast?days=7`).subscribe({
-      next: (res) => { if (res.isSuccess) this.demandForecast.set(res.data?.forecast || []); }
+    // 2. Activity Heatmap
+    this.http.get<any>(`${this.apiUrl}/insights/heatmap?period=week`).subscribe({
+      next: (res) => { if (res.isSuccess) this.heatmapData.set(res.data); }
     });
 
-    // Churn Risk
-    this.http.get<any>(`${this.apiUrl}/insights/churn-risk?userType=customer&pageSize=10`).subscribe({
-      next: (res) => { if (res.isSuccess) this.churnRisk.set(res.data?.items || []); }
+    // 3. Trends
+    this.http.get<any>(`${this.apiUrl}/insights/trends?fromDate=${from}&toDate=${to}&metric=orders`).subscribe({
+      next: (res) => { if (res.isSuccess) this.trends.set(res.data); }
     });
 
-    // Revenue Optimization
-    this.http.get<any>(`${this.apiUrl}/insights/revenue-optimization`).subscribe({
-      next: (res) => { if (res.isSuccess) this.revenueOptimization.set(res.data); }
+    // 4. Engagement Distribution
+    this.http.get<any>(`${this.apiUrl}/insights/engagement-distribution`).subscribe({
+      next: (res) => { if (res.isSuccess) this.engagement.set(res.data); }
     });
 
-    // Supply-Demand
-    this.http.get<any>(`${this.apiUrl}/insights/supply-demand`).subscribe({
-      next: (res) => { if (res.isSuccess) this.supplyDemand.set(res.data); }
+    // 5. RFM Analysis
+    this.http.get<any>(`${this.apiUrl}/insights/rfm-analysis`).subscribe({
+      next: (res) => { if (res.isSuccess) this.rfmAnalysis.set(res.data); }
     });
 
-    // Anomalies
-    this.http.get<any>(`${this.apiUrl}/insights/anomalies`).subscribe({
-      next: (res) => { if (res.isSuccess) this.anomalies.set(res.data || []); }
+    // 6. Behavior Summary
+    this.http.get<any>(`${this.apiUrl}/insights/behavior-summary`).subscribe({
+      next: (res) => { if (res.isSuccess) this.behaviorSummary.set(res.data); }
     });
 
-    // Cohort Analysis
-    this.http.get<any>(`${this.apiUrl}/insights/cohort-analysis?months=6`).subscribe({
+    // 7. Category Performance
+    this.http.get<any>(`${this.apiUrl}/insights/category-performance?period=month`).subscribe({
       next: (res) => {
-        if (res.isSuccess) this.cohortAnalysis.set(res.data);
+        if (res.isSuccess) this.categoryPerformance.set(res.data);
         this.loading.set(false);
       },
       error: () => this.loading.set(false)

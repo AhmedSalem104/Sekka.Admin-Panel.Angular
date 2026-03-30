@@ -39,6 +39,10 @@ export class OrdersComponent implements OnInit {
   assignOrderId = '';
   assignDriverId = '';
 
+  // Suggested drivers
+  suggestedDrivers = signal<any[]>([]);
+  showSuggested = signal(false);
+
   ngOnInit() { this.loadData(); }
 
   loadData() {
@@ -138,6 +142,25 @@ export class OrdersComponent implements OnInit {
     }).subscribe({
       next: (res) => {
         if (res.isSuccess) { this.showOverride.set(false); this.loadData(); }
+      }
+    });
+  }
+
+  autoDistribute() {
+    this.http.post<any>(`${this.apiUrl}/orders/auto-distribute`, {
+      maxOrdersPerDriver: 5
+    }).subscribe({
+      next: (res) => { if (res.isSuccess) this.loadData(); }
+    });
+  }
+
+  viewSuggestedDrivers(orderId: string) {
+    this.http.get<any>(`${this.apiUrl}/orders/${orderId}/suggested-drivers`).subscribe({
+      next: (res) => {
+        if (res.isSuccess) {
+          this.suggestedDrivers.set(res.data || []);
+          this.showSuggested.set(true);
+        }
       }
     });
   }

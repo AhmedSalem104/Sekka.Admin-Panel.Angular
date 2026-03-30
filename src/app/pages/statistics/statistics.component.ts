@@ -14,120 +14,131 @@ import { ChartConfiguration, ChartData } from 'chart.js';
 })
 export class StatisticsComponent implements OnInit {
   private http = inject(HttpClient);
-  private apiUrl = '/api/v1/admin';
+  private api = '/api/v1/admin';
 
   loading = signal(true);
-  period = 'month';
+  activeTab = 'platform';
 
-  revenue = signal<any>({});
-  orders = signal<any>({});
-  drivers = signal<any>({});
-  customers = signal<any>({});
-  topDrivers = signal<any[]>([]);
-  topCustomers = signal<any[]>([]);
+  // All statistics signals
+  platform = signal<any>(null);           // GET /statistics/platform
+  platformDaily = signal<any>(null);      // GET /statistics/platform/daily
+  platformWeekly = signal<any>(null);     // GET /statistics/platform/weekly
+  platformMonthly = signal<any>(null);    // GET /statistics/platform/monthly
+  realtime = signal<any>(null);           // GET /statistics/realtime
+  revenue = signal<any>(null);            // GET /statistics/revenue
+  revenueBreakdown = signal<any>(null);   // GET /statistics/revenue/breakdown
+  financialSummary = signal<any>(null);   // GET /statistics/financial-summary
+  growth = signal<any>(null);             // GET /statistics/growth
+  regions = signal<any[]>([]);            // GET /statistics/regions
+  regionsHeatmap = signal<any>(null);     // GET /statistics/regions/heatmap
+  cancellations = signal<any>(null);      // GET /statistics/cancellations
+  deliveryPerf = signal<any>(null);       // GET /statistics/delivery-performance
+  orderHourly = signal<any>(null);        // GET /statistics/orders/hourly
+  orderStatus = signal<any>(null);        // GET /statistics/orders/status-breakdown
+  driversRanking = signal<any[]>([]);     // GET /statistics/drivers/ranking
+  topCustomers = signal<any[]>([]);       // GET /statistics/customers/top
+  topPartners = signal<any[]>([]);        // GET /statistics/partners/top
 
   // Revenue Line Chart
-  revenueChartData: ChartData<'line'> = {
-    labels: [],
-    datasets: [{
-      data: [],
-      label: 'الإيرادات',
-      borderColor: '#38A169',
-      backgroundColor: 'rgba(56, 161, 105, 0.1)',
-      fill: true,
-      tension: 0.4
-    }]
-  };
-
+  revenueChartData: ChartData<'line'> = { labels: [], datasets: [] };
   revenueChartOptions: ChartConfiguration<'line'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false }
-    },
-    scales: {
-      y: { beginAtZero: true }
-    }
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true } }
   };
 
-  // Orders Doughnut Chart
-  ordersChartData: ChartData<'doughnut'> = {
-    labels: ['مكتمل', 'ملغي', 'قيد التنفيذ', 'معلق'],
-    datasets: [{
-      data: [0, 0, 0, 0],
-      backgroundColor: ['#38A169', '#E53E3E', '#6C63FF', '#ECC94B']
-    }]
-  };
+  ngOnInit() { this.loadAll(); }
 
-  ordersChartOptions: ChartConfiguration<'doughnut'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: { font: { family: 'Tajawal' } }
-      }
-    }
-  };
-
-  ngOnInit() {
-    this.loadData();
-  }
-
-  loadData() {
+  loadAll() {
     this.loading.set(true);
-    const token = localStorage.getItem('sekka_token');
-    const headers = { Authorization: `Bearer ${token}` };
+    const now = new Date();
+    const from = now.toISOString().split('T')[0].slice(0, 8) + '01';
+    const to = now.toISOString().split('T')[0];
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
 
-    this.http.get<any>(`${this.apiUrl}/statistics?period=${this.period}`, { headers }).subscribe({
-      next: (res) => {
-        if (res.isSuccess) {
-          const d = res.data || {};
-          this.revenue.set(d.revenue || {});
-          this.orders.set(d.orders || {});
-          this.drivers.set(d.drivers || {});
-          this.customers.set(d.customers || {});
-          this.topDrivers.set(d.topDrivers || []);
-          this.topCustomers.set(d.topCustomers || []);
+    // Platform overview
+    this.http.get<any>(`${this.api}/statistics/platform`).subscribe({
+      next: r => { if (r.isSuccess) this.platform.set(r.data); }
+    });
+    this.http.get<any>(`${this.api}/statistics/platform/daily?date=${to}`).subscribe({
+      next: r => { if (r.isSuccess) this.platformDaily.set(r.data); }
+    });
+    this.http.get<any>(`${this.api}/statistics/platform/monthly?year=${year}&month=${month}`).subscribe({
+      next: r => { if (r.isSuccess) this.platformMonthly.set(r.data); }
+    });
+    this.http.get<any>(`${this.api}/statistics/realtime`).subscribe({
+      next: r => { if (r.isSuccess) this.realtime.set(r.data); }
+    });
 
-          // Populate revenue chart
-          if (d.revenueChart && d.revenueChart.length > 0) {
+    // Revenue
+    this.http.get<any>(`${this.api}/statistics/revenue?fromDate=${from}&toDate=${to}`).subscribe({
+      next: r => {
+        if (r.isSuccess) {
+          this.revenue.set(r.data);
+          if (r.data?.timeline?.length) {
             this.revenueChartData = {
-              labels: d.revenueChart.map((item: any) => item.label),
-              datasets: [{
-                data: d.revenueChart.map((item: any) => item.value || 0),
-                label: 'الإيرادات',
-                borderColor: '#38A169',
-                backgroundColor: 'rgba(56, 161, 105, 0.1)',
-                fill: true,
-                tension: 0.4
-              }]
-            };
-          }
-
-          // Populate orders chart
-          if (d.orders?.breakdown) {
-            this.ordersChartData = {
-              labels: ['مكتمل', 'ملغي', 'قيد التنفيذ', 'معلق'],
-              datasets: [{
-                data: [
-                  d.orders.breakdown.completed || 0,
-                  d.orders.breakdown.cancelled || 0,
-                  d.orders.breakdown.inProgress || 0,
-                  d.orders.breakdown.pending || 0
-                ],
-                backgroundColor: ['#38A169', '#E53E3E', '#6C63FF', '#ECC94B']
-              }]
+              labels: r.data.timeline.map((t: any) => { const d = new Date(t.period || t.date); return `${d.getDate()}/${d.getMonth()+1}`; }),
+              datasets: [{ data: r.data.timeline.map((t: any) => t.revenue || t.amount || 0), borderColor: '#FC5D01', backgroundColor: 'rgba(252,93,1,0.1)', fill: true, tension: 0.4 }]
             };
           }
         }
+      }
+    });
+    this.http.get<any>(`${this.api}/statistics/revenue/breakdown?period=month`).subscribe({
+      next: r => { if (r.isSuccess) this.revenueBreakdown.set(r.data); }
+    });
+    this.http.get<any>(`${this.api}/statistics/financial-summary?period=month`).subscribe({
+      next: r => { if (r.isSuccess) this.financialSummary.set(r.data); }
+    });
+
+    // Growth
+    this.http.get<any>(`${this.api}/statistics/growth?period=monthly`).subscribe({
+      next: r => { if (r.isSuccess) this.growth.set(r.data); }
+    });
+
+    // Orders
+    this.http.get<any>(`${this.api}/statistics/orders/hourly?date=${to}`).subscribe({
+      next: r => { if (r.isSuccess) this.orderHourly.set(r.data); }
+    });
+    this.http.get<any>(`${this.api}/statistics/orders/status-breakdown?fromDate=${from}&toDate=${to}`).subscribe({
+      next: r => { if (r.isSuccess) this.orderStatus.set(r.data); }
+    });
+    this.http.get<any>(`${this.api}/statistics/cancellations?fromDate=${from}&toDate=${to}`).subscribe({
+      next: r => { if (r.isSuccess) this.cancellations.set(r.data); }
+    });
+    this.http.get<any>(`${this.api}/statistics/delivery-performance?fromDate=${from}&toDate=${to}`).subscribe({
+      next: r => { if (r.isSuccess) this.deliveryPerf.set(r.data); }
+    });
+
+    // Regions
+    this.http.get<any>(`${this.api}/statistics/regions`).subscribe({
+      next: r => { if (r.isSuccess) this.regions.set(r.data || []); }
+    });
+    this.http.get<any>(`${this.api}/statistics/regions/heatmap`).subscribe({
+      next: r => { if (r.isSuccess) this.regionsHeatmap.set(r.data); }
+    });
+
+    // Rankings
+    this.http.get<any>(`${this.api}/statistics/drivers/ranking?metric=completionRate&limit=10`).subscribe({
+      next: r => { if (r.isSuccess) this.driversRanking.set(r.data || []); }
+    });
+    this.http.get<any>(`${this.api}/statistics/customers/top?limit=10&metric=totalSpent`).subscribe({
+      next: r => { if (r.isSuccess) this.topCustomers.set(r.data || []); }
+    });
+    this.http.get<any>(`${this.api}/statistics/partners/top?limit=10&metric=revenue`).subscribe({
+      next: r => {
+        if (r.isSuccess) this.topPartners.set(r.data || []);
         this.loading.set(false);
       },
       error: () => this.loading.set(false)
     });
   }
 
-  onPeriodChange() {
-    this.loadData();
+  exportStats(type: string) {
+    const now = new Date();
+    const from = now.toISOString().split('T')[0].slice(0, 8) + '01';
+    const to = now.toISOString().split('T')[0];
+    window.open(`${this.api}/statistics/export?type=${type}&format=csv&fromDate=${from}&toDate=${to}`, '_blank');
   }
 }

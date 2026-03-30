@@ -30,6 +30,10 @@ export class DriversComponent implements OnInit {
   showPerformance = signal(false);
   performance = signal<any>(null);
 
+  // Locations
+  showLocations = signal(false);
+  driverLocations = signal<any[]>([]);
+
   ngOnInit() { this.loadData(); }
 
   loadData() {
@@ -87,6 +91,17 @@ export class DriversComponent implements OnInit {
   }
 
   Math = Math;
+
+  viewLocations() {
+    this.http.get<any>(`${this.apiUrl}/drivers/locations`).subscribe({
+      next: (res) => {
+        if (res.isSuccess) {
+          this.driverLocations.set(res.data || []);
+          this.showLocations.set(true);
+        }
+      }
+    });
+  }
 
   toggleDriverStatus(driver: any) {
     const action = driver.status === 1 ? 'deactivate' : 'activate';

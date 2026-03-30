@@ -24,10 +24,14 @@ export class PaymentsComponent implements OnInit {
   totalCount = 0;
   Math = Math;
 
+  pendingPayments = signal<any[]>([]);
+  paymentSummary = signal<any>(null);
+  showPending = signal(false);
+
   showDetail = signal(false);
   selectedPayment = signal<any>(null);
 
-  ngOnInit() { this.loadData(); }
+  ngOnInit() { this.loadData(); this.loadSummary(); }
 
   loadData() {
     this.loading.set(true);
@@ -72,16 +76,31 @@ export class PaymentsComponent implements OnInit {
     });
   }
 
-  retryPayment(id: string) {
-    this.http.post<any>(`${this.apiUrl}/payments/${id}/retry`, {}).subscribe({
+  loadPending() {
+    this.http.get<any>(`${this.apiUrl}/payments/pending`).subscribe({
+      next: (res) => { if (res.isSuccess) this.pendingPayments.set(res.data); }
+    });
+  }
+
+  loadSummary() {
+    const now = new Date();
+    const fromDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const toDate = now.toISOString();
+    this.http.get<any>(`${this.apiUrl}/payments/summary?fromDate=${fromDate}&toDate=${toDate}`).subscribe({
+      next: (res) => { if (res.isSuccess) this.paymentSummary.set(res.data); }
+    });
+  }
+
+  approvePayment(id: string) {
+    this.http.post<any>(`${this.apiUrl}/payments/${id}/approve`, {}).subscribe({
       next: (res) => { if (res.isSuccess) this.loadData(); }
     });
   }
 
-  voidPayment(id: string) {
-    const reason = prompt('سبب الإلغاء:');
+  rejectPayment(id: string) {
+    const reason = prompt('سبب الرفض:');
     if (!reason) return;
-    this.http.post<any>(`${this.apiUrl}/payments/${id}/void`, { reason }).subscribe({
+    this.http.post<any>(`${this.apiUrl}/payments/${id}/reject`, { reason }).subscribe({
       next: (res) => { if (res.isSuccess) this.loadData(); }
     });
   }

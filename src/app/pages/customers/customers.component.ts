@@ -19,6 +19,7 @@ export class CustomersComponent implements OnInit {
   loading = signal(true);
   showDetail = signal(false);
   selectedCustomer = signal<any>(null);
+  customerStats = signal<any>(null);
   search = '';
   statusFilter = '';
   currentPage = 1;
@@ -27,6 +28,7 @@ export class CustomersComponent implements OnInit {
 
   ngOnInit() {
     this.loadData();
+    this.loadStats();
   }
 
   loadData() {
@@ -60,7 +62,7 @@ export class CustomersComponent implements OnInit {
   }
 
   activateCustomer(id: string) {
-    this.http.put<any>(`${this.apiUrl}/customers/${id}/activate`, {}).subscribe({
+    this.http.post<any>(`${this.apiUrl}/customers/${id}/unblock`, {}).subscribe({
       next: (res) => {
         if (res.isSuccess) {
           this.loadData();
@@ -73,7 +75,7 @@ export class CustomersComponent implements OnInit {
   }
 
   deactivateCustomer(id: string) {
-    this.http.put<any>(`${this.apiUrl}/customers/${id}/deactivate`, {}).subscribe({
+    this.http.post<any>(`${this.apiUrl}/customers/${id}/block`, {}).subscribe({
       next: (res) => {
         if (res.isSuccess) {
           this.loadData();
@@ -82,6 +84,12 @@ export class CustomersComponent implements OnInit {
           }
         }
       }
+    });
+  }
+
+  loadStats() {
+    this.http.get<any>(`${this.apiUrl}/customers/stats`).subscribe({
+      next: (res) => { if (res.isSuccess) this.customerStats.set(res.data); }
     });
   }
 

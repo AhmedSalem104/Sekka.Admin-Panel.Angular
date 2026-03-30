@@ -1,37 +1,11 @@
 <div class="page-container">
   <div class="page-header">
     <h1>الإشعارات</h1>
-    <button class="btn btn-primary" (click)="toggleSendForm()">+ إرسال إشعار</button>
-  </div>
-
-  @if (showSendForm) {
-    <div class="card" style="margin-bottom: var(--space-xl); padding: var(--space-xxl);">
-      <h3 style="margin-bottom: var(--space-lg);">إرسال إشعار جديد</h3>
-      <div class="form-group">
-        <label>العنوان</label>
-        <input type="text" class="form-control" [(ngModel)]="sendTitle" placeholder="عنوان الإشعار" />
-      </div>
-      <div class="form-group">
-        <label>المحتوى</label>
-        <textarea class="form-control" [(ngModel)]="sendBody" placeholder="محتوى الإشعار"></textarea>
-      </div>
-      <div class="form-group">
-        <label>الفئة المستهدفة</label>
-        <select class="form-control" [(ngModel)]="sendTarget">
-          <option value="all">الكل</option>
-          <option value="drivers">السائقين</option>
-          <option value="customers">العملاء</option>
-          <option value="partners">الشركاء</option>
-        </select>
-      </div>
-      <div style="display: flex; gap: var(--space-md);">
-        <button class="btn btn-primary" (click)="sendNotification()" [disabled]="sending() || !sendTitle || !sendBody">
-          {{ sending() ? 'جاري الإرسال...' : 'إرسال' }}
-        </button>
-        <button class="btn btn-secondary" (click)="toggleSendForm()">إلغاء</button>
-      </div>
+    <div style="display: flex; gap: 8px;">
+      <button class="btn btn-primary" (click)="showSendDriver.set(true)">إرسال لسائق</button>
+      <button class="btn btn-success" (click)="showBroadcast.set(true)">بث عام</button>
     </div>
-  }
+  </div>
 
   <div class="filters-bar">
     <div class="search-box" style="flex: 1; max-width: 400px;">
@@ -46,7 +20,6 @@
     <div class="empty-state">
       <div class="empty-icon">🔔</div>
       <h3>مفيش إشعارات</h3>
-      <p>مفيش نتائج للبحث ده</p>
     </div>
   } @else {
     <div class="table-container">
@@ -55,19 +28,19 @@
           <tr>
             <th>العنوان</th>
             <th>المحتوى</th>
-            <th>الفئة المستهدفة</th>
+            <th>الفئة</th>
             <th>المستلمين</th>
             <th>التاريخ</th>
           </tr>
         </thead>
         <tbody>
-          @for (item of items(); track item.id) {
+          @for (item of items(); track $index) {
             <tr>
               <td style="font-weight: 600; color: var(--text-headline);">{{ item.title || '—' }}</td>
               <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ item.body || '—' }}</td>
-              <td><span class="badge badge-info">{{ item.target || '—' }}</span></td>
-              <td>{{ item.recipientCount || 0 }}</td>
-              <td>{{ item.createdAt | date:'yyyy/MM/dd HH:mm' }}</td>
+              <td><span class="badge badge-info">{{ item.target || item.type || '—' }}</span></td>
+              <td>{{ item.recipientCount || item.sentCount || 0 }}</td>
+              <td>{{ item.createdAt || item.sentAt | date:'yyyy/MM/dd HH:mm' }}</td>
             </tr>
           }
         </tbody>
@@ -77,7 +50,7 @@
     @if (totalPages > 1) {
       <div class="pagination">
         <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)">‹</button>
-        @for (p of [].constructor(totalPages); track $index) {
+        @for (p of [].constructor(Math.min(totalPages, 10)); track $index) {
           <button [class.active]="currentPage === $index + 1" (click)="onPageChange($index + 1)">{{ $index + 1 }}</button>
         }
         <button [disabled]="currentPage === totalPages" (click)="onPageChange(currentPage + 1)">›</button>
@@ -85,3 +58,62 @@
     }
   }
 </div>
+
+<!-- Send to Driver Modal -->
+@if (showSendDriver()) {
+  <div class="modal-overlay" (click)="showSendDriver.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h2 style="margin-bottom: 16px;">إرسال إشعار لسائق</h2>
+      <div class="form-group">
+        <label>IDs السائقين (مفصولة بفاصلة)</label>
+        <input type="text" class="form-control" [(ngModel)]="driverIdInput" placeholder="driver-id-1, driver-id-2" dir="ltr" />
+      </div>
+      <div class="form-group">
+        <label>العنوان</label>
+        <input type="text" class="form-control" [(ngModel)]="driverTitle" placeholder="عنوان الإشعار" />
+      </div>
+      <div class="form-group">
+        <label>المحتوى</label>
+        <textarea class="form-control" [(ngModel)]="driverBody" placeholder="محتوى الإشعار"></textarea>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-primary" (click)="sendToDriver()" [disabled]="sending() || !driverTitle || !driverBody || !driverIdInput">
+          {{ sending() ? 'جاري الإرسال...' : 'إرسال' }}
+        </button>
+        <button class="btn btn-secondary" (click)="showSendDriver.set(false)">إلغاء</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Broadcast Modal -->
+@if (showBroadcast()) {
+  <div class="modal-overlay" (click)="showBroadcast.set(false)">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h2 style="margin-bottom: 16px;">بث إشعار عام</h2>
+      <div class="form-group">
+        <label>الفئة المستهدفة</label>
+        <select class="form-control" [(ngModel)]="broadcastTarget">
+          <option value="All">الكل</option>
+          <option value="Drivers">السائقين</option>
+          <option value="Customers">العملاء</option>
+          <option value="Partners">الشركاء</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>العنوان</label>
+        <input type="text" class="form-control" [(ngModel)]="broadcastTitle" placeholder="عنوان الإشعار" />
+      </div>
+      <div class="form-group">
+        <label>المحتوى</label>
+        <textarea class="form-control" [(ngModel)]="broadcastBody" placeholder="محتوى الإشعار"></textarea>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-primary" (click)="broadcast()" [disabled]="sending() || !broadcastTitle || !broadcastBody">
+          {{ sending() ? 'جاري الإرسال...' : 'بث' }}
+        </button>
+        <button class="btn btn-secondary" (click)="showBroadcast.set(false)">إلغاء</button>
+      </div>
+    </div>
+  </div>
+}

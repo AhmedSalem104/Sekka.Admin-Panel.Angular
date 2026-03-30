@@ -1,175 +1,179 @@
 <div class="page-container">
   <div class="page-header">
     <h1>الإحصائيات المتقدمة</h1>
-    <select class="form-control" style="width: 180px; height: 44px;" [(ngModel)]="period" (change)="onPeriodChange()">
-      <option value="week">هذا الأسبوع</option>
-      <option value="month">هذا الشهر</option>
-      <option value="quarter">هذا الربع</option>
-      <option value="year">هذا العام</option>
-    </select>
+    <div style="display: flex; gap: 8px;">
+      <button class="btn btn-secondary" (click)="exportStats('revenue')">تصدير الإيرادات</button>
+      <button class="btn btn-secondary" (click)="exportStats('orders')">تصدير الطلبات</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab" [class.active]="activeTab === 'platform'" (click)="activeTab = 'platform'">المنصة</button>
+    <button class="tab" [class.active]="activeTab === 'revenue'" (click)="activeTab = 'revenue'">الإيرادات</button>
+    <button class="tab" [class.active]="activeTab === 'orders'" (click)="activeTab = 'orders'">الطلبات</button>
+    <button class="tab" [class.active]="activeTab === 'rankings'" (click)="activeTab = 'rankings'">الترتيب</button>
+    <button class="tab" [class.active]="activeTab === 'regions'" (click)="activeTab = 'regions'">المناطق</button>
   </div>
 
   @if (loading()) {
     <div class="loading-spinner"><div class="spinner"></div></div>
   } @else {
-    <!-- Key Stats -->
-    <div class="stats-grid" style="margin-bottom: var(--space-xxl);">
-      <div class="stat-card">
-        <div class="stat-icon" style="background: rgba(56, 161, 105, 0.12);">💰</div>
-        <div class="stat-content">
-          <div class="stat-label">إجمالي الإيرادات</div>
-          <div class="stat-value">{{ revenue().total | number:'1.0-0' }} ج.م</div>
-          <div class="stat-change" [ngClass]="(revenue().change || 0) >= 0 ? 'positive' : 'negative'">
-            {{ (revenue().change || 0) >= 0 ? '+' : '' }}{{ revenue().change || 0 }}%
+
+    <!-- Platform Tab -->
+    @if (activeTab === 'platform') {
+      @if (realtime(); as rt) {
+        <div class="stats-grid" style="margin-bottom: var(--space-xl);">
+          <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(252,93,1,0.1);">📦</div>
+            <div class="stat-content"><div class="stat-label">طلبات نشطة</div><div class="stat-value">{{ rt.activeOrders || 0 }}</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(56,161,105,0.1);">🚗</div>
+            <div class="stat-content"><div class="stat-label">سائقين أونلاين</div><div class="stat-value">{{ rt.onlineDrivers || 0 }}</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(49,130,206,0.1);">⚡</div>
+            <div class="stat-content"><div class="stat-label">طلبات/دقيقة</div><div class="stat-value">{{ rt.ordersPerMinute || 0 }}</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(236,201,75,0.1);">⏱️</div>
+            <div class="stat-content"><div class="stat-label">متوسط الانتظار</div><div class="stat-value">{{ rt.averageWaitTime || 0 }} د</div></div>
           </div>
         </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background: rgba(49, 130, 206, 0.12);">📦</div>
-        <div class="stat-content">
-          <div class="stat-label">إجمالي الطلبات</div>
-          <div class="stat-value">{{ orders().total | number }}</div>
-          <div class="stat-change" [ngClass]="(orders().change || 0) >= 0 ? 'positive' : 'negative'">
-            {{ (orders().change || 0) >= 0 ? '+' : '' }}{{ orders().change || 0 }}%
+      }
+
+      @if (platformDaily(); as pd) {
+        <div class="card" style="padding: var(--space-xl); margin-bottom: var(--space-lg);">
+          <h3 style="margin-bottom: 12px;">إحصائيات اليوم</h3>
+          <pre style="direction: ltr; font-size: 13px; overflow-x: auto;">{{ pd | json }}</pre>
+        </div>
+      }
+
+      @if (platformMonthly(); as pm) {
+        <div class="card" style="padding: var(--space-xl);">
+          <h3 style="margin-bottom: 12px;">إحصائيات الشهر</h3>
+          <pre style="direction: ltr; font-size: 13px; overflow-x: auto;">{{ pm | json }}</pre>
+        </div>
+      }
+    }
+
+    <!-- Revenue Tab -->
+    @if (activeTab === 'revenue') {
+      @if (financialSummary(); as fs) {
+        <div class="stats-grid" style="margin-bottom: var(--space-xl);">
+          <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(56,161,105,0.1);">💵</div>
+            <div class="stat-content"><div class="stat-label">إجمالي الإيرادات</div><div class="stat-value">{{ fs.totalRevenue?.toLocaleString() || 0 }} ج.م</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(252,93,1,0.1);">📊</div>
+            <div class="stat-content"><div class="stat-label">العمولات</div><div class="stat-value">{{ fs.totalCommissions?.toLocaleString() || 0 }} ج.م</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(49,130,206,0.1);">🚚</div>
+            <div class="stat-content"><div class="stat-label">رسوم التوصيل</div><div class="stat-value">{{ fs.totalDeliveryFees?.toLocaleString() || 0 }} ج.م</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(56,161,105,0.1);">💎</div>
+            <div class="stat-content"><div class="stat-label">صافي الربح</div><div class="stat-value" style="color: var(--success);">{{ fs.netProfit?.toLocaleString() || 0 }} ج.م</div></div>
           </div>
         </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background: var(--primary-light);">🚗</div>
-        <div class="stat-content">
-          <div class="stat-label">السائقين النشطين</div>
-          <div class="stat-value">{{ drivers().active | number }}</div>
-          <div class="stat-change" [ngClass]="(drivers().change || 0) >= 0 ? 'positive' : 'negative'">
-            {{ (drivers().change || 0) >= 0 ? '+' : '' }}{{ drivers().change || 0 }}%
+      }
+
+      @if (revenueChartData.labels?.length) {
+        <div class="card chart-card" style="margin-bottom: var(--space-lg);">
+          <div class="card-header"><h3>الإيرادات</h3></div>
+          <div style="height: 300px;">
+            <canvas baseChart [type]="'line'" [data]="revenueChartData" [options]="revenueChartOptions"></canvas>
           </div>
         </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background: rgba(128, 90, 213, 0.12);">👥</div>
-        <div class="stat-content">
-          <div class="stat-label">العملاء الجدد</div>
-          <div class="stat-value">{{ customers().new | number }}</div>
-          <div class="stat-change" [ngClass]="(customers().change || 0) >= 0 ? 'positive' : 'negative'">
-            {{ (customers().change || 0) >= 0 ? '+' : '' }}{{ customers().change || 0 }}%
-          </div>
-        </div>
-      </div>
-    </div>
+      }
 
-    <!-- Charts Row -->
-    <div class="grid-2" style="margin-bottom: var(--space-xxl);">
-      <!-- Revenue Chart -->
-      <div class="card" style="padding: var(--space-xxl);">
-        <h3 style="margin-bottom: var(--space-lg);">الإيرادات</h3>
-        <div style="height: 300px;">
-          <canvas baseChart
-            [type]="'line'"
-            [data]="revenueChartData"
-            [options]="revenueChartOptions">
-          </canvas>
+      @if (revenueBreakdown(); as rb) {
+        <div class="card" style="padding: var(--space-xl);">
+          <h3 style="margin-bottom: 12px;">تفاصيل الإيرادات</h3>
+          <pre style="direction: ltr; font-size: 13px; overflow-x: auto;">{{ rb | json }}</pre>
         </div>
-      </div>
+      }
+    }
 
-      <!-- Orders Breakdown Chart -->
-      <div class="card" style="padding: var(--space-xxl);">
-        <h3 style="margin-bottom: var(--space-lg);">توزيع الطلبات</h3>
-        <div style="height: 300px;">
-          <canvas baseChart
-            [type]="'doughnut'"
-            [data]="ordersChartData"
-            [options]="ordersChartOptions">
-          </canvas>
+    <!-- Orders Tab -->
+    @if (activeTab === 'orders') {
+      @if (orderStatus(); as os) {
+        <div class="card" style="padding: var(--space-xl); margin-bottom: var(--space-lg);">
+          <h3 style="margin-bottom: 12px;">توزيع حالات الطلبات</h3>
+          <pre style="direction: ltr; font-size: 13px; overflow-x: auto;">{{ os | json }}</pre>
         </div>
-      </div>
-    </div>
+      }
 
-    <!-- Additional Stats -->
-    <div class="grid-2" style="margin-bottom: var(--space-xxl);">
-      <div class="stat-card">
-        <div class="stat-icon" style="background: rgba(236, 201, 75, 0.12);">⏱️</div>
-        <div class="stat-content">
-          <div class="stat-label">متوسط وقت التوصيل</div>
-          <div class="stat-value">{{ orders().avgDeliveryTime || 0 }} دقيقة</div>
+      @if (cancellations(); as c) {
+        <div class="card" style="padding: var(--space-xl); margin-bottom: var(--space-lg);">
+          <h3 style="margin-bottom: 12px;">تحليل الإلغاءات</h3>
+          <pre style="direction: ltr; font-size: 13px; overflow-x: auto;">{{ c | json }}</pre>
         </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background: rgba(229, 62, 62, 0.12);">❌</div>
-        <div class="stat-content">
-          <div class="stat-label">معدل الإلغاء</div>
-          <div class="stat-value">{{ orders().cancellationRate || 0 }}%</div>
-        </div>
-      </div>
-    </div>
+      }
 
-    <!-- Top Performers -->
-    <div class="grid-2">
-      <!-- Top Drivers -->
-      <div class="card" style="padding: var(--space-xxl);">
-        <h3 style="margin-bottom: var(--space-lg);">أفضل السائقين</h3>
-        @if (topDrivers().length > 0) {
-          <div class="table-container">
-            <table>
-              <thead>
+      @if (deliveryPerf(); as dp) {
+        <div class="card" style="padding: var(--space-xl);">
+          <h3 style="margin-bottom: 12px;">أداء التوصيل</h3>
+          <pre style="direction: ltr; font-size: 13px; overflow-x: auto;">{{ dp | json }}</pre>
+        </div>
+      }
+    }
+
+    <!-- Rankings Tab -->
+    @if (activeTab === 'rankings') {
+      <div class="grid-3">
+        <div class="card" style="padding: var(--space-xl);">
+          <h3 style="margin-bottom: 12px;">أفضل السائقين</h3>
+          @for (d of driversRanking(); track $index) {
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+              <span style="font-weight: 600;">{{ $index + 1 }}. {{ d.driverName || d.name || '—' }}</span>
+              <span>{{ d.completionRate || d.rating || 0 }}</span>
+            </div>
+          }
+        </div>
+        <div class="card" style="padding: var(--space-xl);">
+          <h3 style="margin-bottom: 12px;">أفضل العملاء</h3>
+          @for (c of topCustomers(); track $index) {
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+              <span style="font-weight: 600;">{{ $index + 1 }}. {{ c.customerName || c.name || '—' }}</span>
+              <span style="color: var(--success);">{{ c.totalSpent?.toLocaleString() || 0 }} ج.م</span>
+            </div>
+          }
+        </div>
+        <div class="card" style="padding: var(--space-xl);">
+          <h3 style="margin-bottom: 12px;">أفضل الشركاء</h3>
+          @for (p of topPartners(); track $index) {
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+              <span style="font-weight: 600;">{{ $index + 1 }}. {{ p.partnerName || p.name || '—' }}</span>
+              <span style="color: var(--success);">{{ p.revenue?.toLocaleString() || 0 }} ج.م</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Regions Tab -->
+    @if (activeTab === 'regions') {
+      @if (regions().length) {
+        <div class="table-container">
+          <table>
+            <thead><tr><th>المنطقة</th><th>الطلبات</th><th>الإيرادات</th><th>السائقين</th><th>العملاء</th></tr></thead>
+            <tbody>
+              @for (r of regions(); track $index) {
                 <tr>
-                  <th>السائق</th>
-                  <th>الطلبات</th>
-                  <th>التقييم</th>
+                  <td style="font-weight: 600;">{{ r.regionName || r.name }}</td>
+                  <td>{{ r.totalOrders?.toLocaleString() }}</td>
+                  <td style="color: var(--success); font-weight: 600;">{{ r.revenue?.toLocaleString() }} ج.م</td>
+                  <td>{{ r.activeDrivers }}</td>
+                  <td>{{ r.activeCustomers?.toLocaleString() }}</td>
                 </tr>
-              </thead>
-              <tbody>
-                @for (driver of topDrivers(); track $index) {
-                  <tr>
-                    <td>
-                      <div style="display: flex; align-items: center; gap: 8px;">
-                        <div class="avatar avatar-sm">{{ driver.name?.charAt(0) || 'س' }}</div>
-                        <span style="font-weight: 600;">{{ driver.name || '—' }}</span>
-                      </div>
-                    </td>
-                    <td style="font-weight: 600;">{{ driver.ordersCount || 0 }}</td>
-                    <td>⭐ {{ driver.rating?.toFixed(1) || '0.0' }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        } @else {
-          <p style="color: var(--text-caption);">لا توجد بيانات</p>
-        }
-      </div>
-
-      <!-- Top Customers -->
-      <div class="card" style="padding: var(--space-xxl);">
-        <h3 style="margin-bottom: var(--space-lg);">أفضل العملاء</h3>
-        @if (topCustomers().length > 0) {
-          <div class="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>العميل</th>
-                  <th>الطلبات</th>
-                  <th>المصروفات</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (customer of topCustomers(); track $index) {
-                  <tr>
-                    <td>
-                      <div style="display: flex; align-items: center; gap: 8px;">
-                        <div class="avatar avatar-sm">{{ customer.name?.charAt(0) || 'ع' }}</div>
-                        <span style="font-weight: 600;">{{ customer.name || '—' }}</span>
-                      </div>
-                    </td>
-                    <td style="font-weight: 600;">{{ customer.ordersCount || 0 }}</td>
-                    <td style="font-weight: 600; color: var(--success);">{{ customer.totalSpent | number:'1.0-0' }} ج.م</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        } @else {
-          <p style="color: var(--text-caption);">لا توجد بيانات</p>
-        }
-      </div>
-    </div>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
   }
 </div>

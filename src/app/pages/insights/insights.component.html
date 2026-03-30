@@ -1,206 +1,101 @@
 <div class="page-container">
   <div class="page-header">
-    <h1>🧠 التقارير الذكية</h1>
+    <h1>التقارير الذكية</h1>
   </div>
 
-  <!-- Tabs -->
   <div class="tabs">
-    <button class="tab" [class.active]="activeTab === 'insights'" (click)="activeTab = 'insights'">رؤى الأعمال</button>
-    <button class="tab" [class.active]="activeTab === 'forecast'" (click)="activeTab = 'forecast'">توقعات الطلب</button>
-    <button class="tab" [class.active]="activeTab === 'churn'" (click)="activeTab = 'churn'">مخاطر الفقدان</button>
-    <button class="tab" [class.active]="activeTab === 'revenue'" (click)="activeTab = 'revenue'">تحسين الإيرادات</button>
-    <button class="tab" [class.active]="activeTab === 'supply'" (click)="activeTab = 'supply'">العرض والطلب</button>
-    <button class="tab" [class.active]="activeTab === 'anomalies'" (click)="activeTab = 'anomalies'">الشذوذات</button>
+    <button class="tab" [class.active]="activeTab === 'insights'" (click)="activeTab = 'insights'">نظرة عامة</button>
+    <button class="tab" [class.active]="activeTab === 'heatmap'" (click)="activeTab = 'heatmap'">خريطة النشاط</button>
+    <button class="tab" [class.active]="activeTab === 'trends'" (click)="activeTab = 'trends'">الاتجاهات</button>
+    <button class="tab" [class.active]="activeTab === 'engagement'" (click)="activeTab = 'engagement'">التفاعل</button>
+    <button class="tab" [class.active]="activeTab === 'rfm'" (click)="activeTab = 'rfm'">تحليل RFM</button>
+    <button class="tab" [class.active]="activeTab === 'behavior'" (click)="activeTab = 'behavior'">السلوك</button>
+    <button class="tab" [class.active]="activeTab === 'category'" (click)="activeTab = 'category'">الفئات</button>
   </div>
 
   @if (loading()) {
     <div class="loading-spinner"><div class="spinner"></div></div>
   } @else {
 
-    <!-- Business Insights -->
-    @if (activeTab === 'insights') {
-      @if (insights().length === 0) {
-        <div class="empty-state"><div class="empty-icon">🧠</div><h3>مفيش رؤى حالياً</h3></div>
-      } @else {
-        <div class="grid-2" style="gap: var(--space-lg);">
-          @for (item of insights(); track item.id) {
-            <div class="card" style="padding: var(--space-xl);">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                <h4>{{ item.title }}</h4>
-                <span class="badge" [ngClass]="getSeverityBadge(item.severity)">{{ item.severity }}</span>
-              </div>
-              <p style="color: var(--text-body); margin-bottom: 12px;">{{ item.description }}</p>
-              <div style="display: flex; gap: 16px; margin-bottom: 12px;">
-                <div><span style="color: var(--text-caption); font-size: 12px;">الحالي</span><br><strong>{{ item.currentValue }}</strong></div>
-                <div><span style="color: var(--text-caption); font-size: 12px;">السابق</span><br><strong>{{ item.previousValue }}</strong></div>
-                <div>
-                  <span style="color: var(--text-caption); font-size: 12px;">التغيير</span><br>
-                  <strong [style.color]="item.change >= 0 ? 'var(--success)' : 'var(--error)'">{{ item.change > 0 ? '+' : '' }}{{ item.change }}%</strong>
-                </div>
-              </div>
-              @if (item.recommendations?.length) {
-                <h5 style="margin-bottom: 6px;">التوصيات:</h5>
-                @for (rec of item.recommendations; track $index) {
-                  <p style="font-size: 13px; color: var(--primary); margin: 4px 0;">• {{ rec }}</p>
-                }
-              }
-            </div>
-          }
-        </div>
-      }
-    }
-
-    <!-- Demand Forecast -->
-    @if (activeTab === 'forecast') {
-      <div class="table-container">
-        <table>
-          <thead><tr><th>التاريخ</th><th>الطلبات المتوقعة</th><th>الثقة</th><th>ساعات الذروة</th><th>السائقين المطلوبين</th></tr></thead>
-          <tbody>
-            @for (item of demandForecast(); track $index) {
-              <tr>
-                <td style="font-weight: 600;">{{ item.date | date:'yyyy/MM/dd' }}</td>
-                <td style="font-weight: 700; color: var(--primary);">{{ item.expectedOrders }}</td>
-                <td>
-                  <span class="badge" [ngClass]="(item.confidence * 100) > 80 ? 'badge-success' : 'badge-warning'">
-                    {{ (item.confidence * 100).toFixed(0) }}%
-                  </span>
-                </td>
-                <td>{{ item.peakHours?.join(', ') }}</td>
-                <td>{{ item.recommendedDrivers }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
-
-    <!-- Churn Risk -->
-    @if (activeTab === 'churn') {
-      <div class="table-container">
-        <table>
-          <thead><tr><th>المستخدم</th><th>التليفون</th><th>درجة الخطر</th><th>المستوى</th><th>آخر نشاط</th><th>الأسباب</th></tr></thead>
-          <tbody>
-            @for (item of churnRisk(); track $index) {
-              <tr>
-                <td style="font-weight: 600;">{{ item.userName }}</td>
-                <td dir="ltr" style="text-align: right;">{{ item.userPhone }}</td>
-                <td style="font-weight: 700;">{{ item.riskScore }}/100</td>
-                <td><span class="badge" [ngClass]="getChurnBadge(item.riskLevel)">{{ item.riskLevel }}</span></td>
-                <td>{{ item.lastActivityAt | date:'yyyy/MM/dd' }}</td>
-                <td>
-                  @for (f of item.factors || []; track $index) {
-                    <p style="font-size: 12px; margin: 2px 0;">• {{ f }}</p>
-                  }
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
-
-    <!-- Revenue Optimization -->
-    @if (activeTab === 'revenue') {
-      @if (revenueOptimization()?.suggestions?.length) {
-        <div class="grid-2" style="gap: var(--space-lg);">
-          @for (s of revenueOptimization().suggestions; track $index) {
-            <div class="card" style="padding: var(--space-xl);">
-              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <h4>{{ s.title }}</h4>
-                <span class="badge" [ngClass]="s.priority === 'high' ? 'badge-error' : s.priority === 'medium' ? 'badge-warning' : 'badge-info'">{{ s.priority }}</span>
-              </div>
-              <p style="color: var(--text-body); margin-bottom: 8px;">{{ s.description }}</p>
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span class="badge badge-info">{{ s.category }}</span>
-                <strong style="color: var(--success);">+{{ s.estimatedImpact?.toLocaleString() }} ج.م</strong>
-              </div>
-            </div>
-          }
-        </div>
-      } @else {
-        <div class="empty-state"><h3>مفيش اقتراحات حالياً</h3></div>
-      }
-    }
-
-    <!-- Supply-Demand -->
-    @if (activeTab === 'supply') {
-      @if (supplyDemand(); as sd) {
-        <div class="stats-grid" style="margin-bottom: var(--space-xl);">
+    @if (activeTab === 'insights' && overview(); as o) {
+      <div class="stats-grid" style="margin-bottom: var(--space-xl);">
+        @for (entry of (o | keyvalue); track entry.key) {
           <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(56, 161, 105, 0.1);">🟢</div>
             <div class="stat-content">
-              <div class="stat-label">سائقين أونلاين</div>
-              <div class="stat-value">{{ sd.currentStatus?.onlineDrivers }}</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(252, 93, 1, 0.1);">📦</div>
-            <div class="stat-content">
-              <div class="stat-label">طلبات نشطة</div>
-              <div class="stat-value">{{ sd.currentStatus?.activeOrders }}</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(49, 130, 206, 0.1);">📊</div>
-            <div class="stat-content">
-              <div class="stat-label">النسبة</div>
-              <div class="stat-value">{{ sd.currentStatus?.ratio?.toFixed(1) }}</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(128, 90, 213, 0.1);">📍</div>
-            <div class="stat-content">
-              <div class="stat-label">الحالة</div>
-              <div class="stat-value">{{ sd.currentStatus?.status }}</div>
-            </div>
-          </div>
-        </div>
-
-        @if (sd.hourlyForecast?.length) {
-          <div class="table-container">
-            <table>
-              <thead><tr><th>الساعة</th><th>الطلب المتوقع</th><th>العرض المتوقع</th><th>الحالة</th></tr></thead>
-              <tbody>
-                @for (h of sd.hourlyForecast; track h.hour) {
-                  <tr>
-                    <td style="font-weight: 600;">{{ h.hour }}:00</td>
-                    <td>{{ h.expectedDemand }}</td>
-                    <td>{{ h.expectedSupply }}</td>
-                    <td>
-                      <span class="badge" [ngClass]="h.status === 'Shortage' ? 'badge-error' : h.status === 'Surplus' ? 'badge-success' : 'badge-info'">
-                        {{ h.status === 'Shortage' ? 'نقص' : h.status === 'Surplus' ? 'فائض' : 'متوازن' }}
-                      </span>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        }
-      }
-    }
-
-    <!-- Anomalies -->
-    @if (activeTab === 'anomalies') {
-      @if (anomalies().length === 0) {
-        <div class="empty-state"><div class="empty-icon">✅</div><h3>مفيش شذوذات مكتشفة</h3></div>
-      } @else {
-        @for (a of anomalies(); track a.id) {
-          <div class="card" style="padding: var(--space-xl); margin-bottom: var(--space-md);">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <h4>{{ a.description }}</h4>
-                <p style="font-size: 13px; color: var(--text-caption);">{{ a.type }} — {{ a.region }} — {{ a.detectedAt | date:'yyyy/MM/dd HH:mm' }}</p>
-              </div>
-              <div style="text-align: left;">
-                <span class="badge" [ngClass]="getSeverityBadge(a.severity)">{{ a.severity }}</span>
-                <div style="margin-top: 4px; font-size: 13px;">
-                  متوقع: <strong>{{ a.expectedValue }}</strong> — فعلي: <strong style="color: var(--error);">{{ a.actualValue }}</strong>
-                </div>
-              </div>
+              <div class="stat-label">{{ entry.key }}</div>
+              <div class="stat-value">{{ entry.value }}</div>
             </div>
           </div>
         }
+      </div>
+    }
+    @if (activeTab === 'insights' && !overview()) {
+      <div class="empty-state"><div class="empty-icon">🧠</div><h3>مفيش بيانات حالياً</h3><p>البيانات هتظهر بعد ما يتم تجميع بيانات كافية</p></div>
+    }
+
+    @if (activeTab === 'heatmap') {
+      @if (heatmapData(); as h) {
+        <div class="card" style="padding: var(--space-xl);">
+          <h3 style="margin-bottom: 16px;">خريطة النشاط الأسبوعية</h3>
+          <pre style="direction: ltr; font-size: 13px; overflow-x: auto;">{{ h | json }}</pre>
+        </div>
+      } @else {
+        <div class="empty-state"><h3>مفيش بيانات</h3></div>
+      }
+    }
+
+    @if (activeTab === 'trends') {
+      @if (trends(); as t) {
+        <div class="card" style="padding: var(--space-xl);">
+          <h3 style="margin-bottom: 16px;">اتجاهات الطلبات</h3>
+          <pre style="direction: ltr; font-size: 13px; overflow-x: auto;">{{ t | json }}</pre>
+        </div>
+      } @else {
+        <div class="empty-state"><h3>مفيش بيانات</h3></div>
+      }
+    }
+
+    @if (activeTab === 'engagement') {
+      @if (engagement(); as e) {
+        <div class="card" style="padding: var(--space-xl);">
+          <h3 style="margin-bottom: 16px;">توزيع التفاعل</h3>
+          <pre style="direction: ltr; font-size: 13px; overflow-x: auto;">{{ e | json }}</pre>
+        </div>
+      } @else {
+        <div class="empty-state"><h3>مفيش بيانات</h3></div>
+      }
+    }
+
+    @if (activeTab === 'rfm') {
+      @if (rfmAnalysis(); as r) {
+        <div class="card" style="padding: var(--space-xl);">
+          <h3 style="margin-bottom: 16px;">تحليل RFM (Recency, Frequency, Monetary)</h3>
+          <pre style="direction: ltr; font-size: 13px; overflow-x: auto;">{{ r | json }}</pre>
+        </div>
+      } @else {
+        <div class="empty-state"><h3>مفيش بيانات</h3></div>
+      }
+    }
+
+    @if (activeTab === 'behavior') {
+      @if (behaviorSummary(); as b) {
+        <div class="card" style="padding: var(--space-xl);">
+          <h3 style="margin-bottom: 16px;">ملخص السلوك</h3>
+          <pre style="direction: ltr; font-size: 13px; overflow-x: auto;">{{ b | json }}</pre>
+        </div>
+      } @else {
+        <div class="empty-state"><h3>مفيش بيانات</h3></div>
+      }
+    }
+
+    @if (activeTab === 'category') {
+      @if (categoryPerformance(); as c) {
+        <div class="card" style="padding: var(--space-xl);">
+          <h3 style="margin-bottom: 16px;">أداء الفئات</h3>
+          <pre style="direction: ltr; font-size: 13px; overflow-x: auto;">{{ c | json }}</pre>
+        </div>
+      } @else {
+        <div class="empty-state"><h3>مفيش بيانات</h3></div>
       }
     }
   }

@@ -27,6 +27,13 @@ export class SubscriptionsComponent implements OnInit {
   showDetail = signal(false);
   selectedSub = signal<any>(null);
 
+  // Plans & Expiring
+  plans = signal<any[]>([]);
+  expiringList = signal<any[]>([]);
+  showPlans = signal(false);
+  showExpiring = signal(false);
+  showCreatePlan = signal(false);
+
   // Extend modal
   showExtend = signal(false);
   extendId = '';
@@ -43,6 +50,8 @@ export class SubscriptionsComponent implements OnInit {
   ngOnInit() {
     this.loadData();
     this.loadStats();
+    this.loadPlans();
+    this.loadExpiring();
   }
 
   loadData() {
@@ -106,6 +115,51 @@ export class SubscriptionsComponent implements OnInit {
     if (!reason) return;
     this.http.put<any>(`${this.apiUrl}/subscriptions/${id}/cancel`, { reason }).subscribe({
       next: (res) => { if (res.isSuccess) this.loadData(); }
+    });
+  }
+
+  loadPlans() {
+    this.http.get<any>(`${this.apiUrl}/subscriptions/plans`).subscribe({
+      next: (res) => { if (res.isSuccess) this.plans.set(res.data || []); }
+    });
+  }
+
+  loadExpiring() {
+    this.http.get<any>(`${this.apiUrl}/subscriptions/expiring-soon?days=7`).subscribe({
+      next: (res) => { if (res.isSuccess) this.expiringList.set(res.data || []); }
+    });
+  }
+
+  changePlan(id: string) {
+    const newPlanId = prompt('معرف الخطة الجديدة:');
+    if (!newPlanId) return;
+    const reason = prompt('سبب التغيير:');
+    if (!reason) return;
+    this.http.put<any>(`${this.apiUrl}/subscriptions/${id}/change-plan`, {
+      newPlanId, reason
+    }).subscribe({
+      next: (res) => { if (res.isSuccess) this.loadData(); }
+    });
+  }
+
+  createPlan() {
+    this.showCreatePlan.set(true);
+  }
+
+  submitCreatePlan(planData: any) {
+    this.http.post<any>(`${this.apiUrl}/subscriptions/plans`, planData).subscribe({
+      next: (res) => {
+        if (res.isSuccess) {
+          this.showCreatePlan.set(false);
+          this.loadPlans();
+        }
+      }
+    });
+  }
+
+  togglePlan(id: number) {
+    this.http.put<any>(`${this.apiUrl}/subscriptions/plans/${id}/toggle`, {}).subscribe({
+      next: (res) => { if (res.isSuccess) this.loadPlans(); }
     });
   }
 

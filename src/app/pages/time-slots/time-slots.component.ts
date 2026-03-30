@@ -25,8 +25,11 @@ export class TimeSlotsComponent implements OnInit {
   showCreate = signal(false);
   newSlot = { name: '', startTime: '', endTime: '', maxOrders: 0, surchargePercent: 0, regionId: '', isActive: true };
 
+  slotStats = signal<any>(null);
+
   ngOnInit() {
     this.loadData();
+    this.loadStats();
   }
 
   loadData() {
@@ -80,6 +83,18 @@ export class TimeSlotsComponent implements OnInit {
     if (!confirm('متأكد إنك عايز تحذف الفترة دي؟')) return;
     this.http.delete<any>(`/api/v1/admin/time-slots/${id}`).subscribe({
       next: () => this.loadData()
+    });
+  }
+
+  generateWeek() {
+    this.http.post<any>('/api/v1/admin/time-slots/generate-week', {}).subscribe({
+      next: (res) => { if (res.isSuccess) this.loadData(); }
+    });
+  }
+
+  loadStats() {
+    this.http.get<any>('/api/v1/admin/time-slots/stats').subscribe({
+      next: (res) => { if (res.isSuccess) this.slotStats.set(res.data); }
     });
   }
 

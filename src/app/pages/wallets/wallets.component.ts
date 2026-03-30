@@ -25,10 +25,16 @@ export class WalletsComponent implements OnInit {
 
   // Stats
   stats = signal<any>(null);
+  frozenWallets = signal<any[]>([]);
+  highBalance = signal<any[]>([]);
 
   // Detail
   showDetail = signal(false);
   selectedWallet = signal<any>(null);
+
+  // Bulk adjust
+  showBulkAdjust = signal(false);
+  bulkAdjustData = { driverIds: '', amount: 0, type: 'Credit', reason: '' };
 
   // Adjust balance
   showAdjust = signal(false);
@@ -112,5 +118,43 @@ export class WalletsComponent implements OnInit {
     this.http.put<any>(`${this.apiUrl}/wallets/${id}/unfreeze`, { reason }).subscribe({
       next: (res) => { if (res.isSuccess) this.loadData(); }
     });
+  }
+
+  loadFrozen() {
+    this.http.get<any>(`${this.apiUrl}/wallets/frozen`).subscribe({
+      next: (res) => { if (res.isSuccess) this.frozenWallets.set(res.data); }
+    });
+  }
+
+  loadHighBalance() {
+    this.http.get<any>(`${this.apiUrl}/wallets/high-balance?threshold=5000`).subscribe({
+      next: (res) => { if (res.isSuccess) this.highBalance.set(res.data); }
+    });
+  }
+
+  viewTransactions(driverId: string) {
+    return this.http.get<any>(`${this.apiUrl}/wallets/driver/${driverId}/transactions?pageNumber=1&pageSize=20`);
+  }
+
+  bulkAdjust() {
+    this.showBulkAdjust.set(true);
+  }
+
+  submitBulkAdjust() {
+    const driverIds = this.bulkAdjustData.driverIds.split(',').map(id => id.trim()).filter(id => id);
+    this.http.post<any>(`${this.apiUrl}/wallets/bulk-adjust`, {
+      driverIds,
+      amount: this.bulkAdjustData.amount,
+      type: this.bulkAdjustData.type,
+      reason: this.bulkAdjustData.reason
+    }).subscribe({
+      next: (res) => {
+        if (res.isSuccess) { this.showBulkAdjust.set(false); this.loadData(); this.loadStats(); }
+      }
+    });
+  }
+
+  exportWallets() {
+    window.open(`${this.apiUrl}/wallets/export?format=csv`, '_blank');
   }
 }

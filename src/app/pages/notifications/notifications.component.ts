@@ -12,7 +12,7 @@ import { HttpClient } from '@angular/common/http';
 })
 export class NotificationsComponent implements OnInit {
   private http = inject(HttpClient);
-  private apiUrl = '/api/v1/admin';
+  private api = '/api/v1/admin';
 
   items = signal<any[]>([]);
   loading = signal(true);
@@ -20,32 +20,36 @@ export class NotificationsComponent implements OnInit {
   currentPage = 1;
   totalPages = 1;
   totalCount = 0;
+  Math = Math;
 
-  // Send notification form
-  showSendForm = false;
-  sendTitle = '';
-  sendBody = '';
-  sendTarget = 'all';
+  // Send forms
+  showSendDriver = signal(false);
+  showBroadcast = signal(false);
   sending = signal(false);
 
-  ngOnInit() {
-    this.loadData();
-  }
+  // Send to driver
+  driverTitle = '';
+  driverBody = '';
+  driverIds: string[] = [];
+  driverIdInput = '';
+
+  // Broadcast
+  broadcastTitle = '';
+  broadcastBody = '';
+  broadcastTarget = 'All';
+
+  ngOnInit() { this.loadData(); }
 
   loadData() {
     this.loading.set(true);
-    const token = localStorage.getItem('sekka_token');
-    let url = `${this.apiUrl}/notifications?pageNumber=${this.currentPage}&pageSize=10`;
+    let url = `${this.api}/notifications/history?pageNumber=${this.currentPage}&pageSize=10`;
     if (this.search) url += `&search=${this.search}`;
-
-    this.http.get<any>(url, {
-      headers: { Authorization: `Bearer ${token}` }
-    }).subscribe({
+    this.http.get<any>(url).subscribe({
       next: (res) => {
         if (res.isSuccess) {
-          this.items.set(res.data.items || []);
-          this.totalPages = res.data.totalPages || 1;
-          this.totalCount = res.data.totalCount || 0;
+          this.items.set(res.data?.items || res.data || []);
+          this.totalPages = res.data?.totalPages || 1;
+          this.totalCount = res.data?.totalCount || 0;
         }
         this.loading.set(false);
       },
@@ -53,38 +57,37 @@ export class NotificationsComponent implements OnInit {
     });
   }
 
-  onSearch() {
-    this.currentPage = 1;
-    this.loadData();
-  }
+  onSearch() { this.currentPage = 1; this.loadData(); }
+  onPageChange(page: number) { this.currentPage = page; this.loadData(); }
 
-  onPageChange(page: number) {
-    this.currentPage = page;
-    this.loadData();
-  }
-
-  toggleSendForm() {
-    this.showSendForm = !this.showSendForm;
-  }
-
-  sendNotification() {
-    if (!this.sendTitle || !this.sendBody) return;
+  // Send to specific driver(s)
+  sendToDriver() {
+    if (!this.driverTitle || !this.driverBody || !this.driverIdInput) return;
     this.sending.set(true);
-    const token = localStorage.getItem('sekka_token');
-    this.http.post<any>(`${this.apiUrl}/notifications/send`, {
-      title: this.sendTitle,
-      body: this.sendBody,
-      target: this.sendTarget
-    }, {
-      headers: { Authorization: `Bearer ${token}` }
+    this.http.post<any>(`${this.api}/notifications/send-to-driver`, {
+      driverIds: this.driverIdInput.split(',').map(id => id.trim()),
+      title: this.driverTitle,
+      body: this.driverBody
     }).subscribe({
       next: (res) => {
-        if (res.isSuccess) {
-          this.sendTitle = '';
-          this.sendBody = '';
-          this.showSendForm = false;
-          this.loadData();
-        }
+        if (res.isSuccess) { this.showSendDriver.set(false); this.driverTitle = ''; this.driverBody = ''; this.driverIdInput = ''; this.loadData(); }
+        this.sending.set(false);
+      },
+      error: () => this.sending.set(false)
+    });
+  }
+
+  // Broadcast to all / segment
+  broadcast() {
+    if (!this.broadcastTitle || !this.broadcastBody) return;
+    this.sending.set(true);
+    this.http.post<any>(`${this.api}/notifications/broadcast`, {
+      title: this.broadcastTitle,
+      body: this.broadcastBody,
+      target: this.broadcastTarget
+    }).subscribe({
+      next: (res) => {
+        if (res.isSuccess) { this.showBroadcast.set(false); this.broadcastTitle = ''; this.broadcastBody = ''; this.loadData(); }
         this.sending.set(false);
       },
       error: () => this.sending.set(false)

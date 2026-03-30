@@ -144,4 +144,26 @@ export class DisputesComponent implements OnInit {
     };
     return map[priority] || 'badge-inactive';
   }
+
+  rejectDispute(id: string) {
+    const reason = prompt('سبب الرفض:');
+    if (!reason) return;
+    this.http.put<any>(`${this.apiUrl}/disputes/${id}/reject`, { reason }).subscribe({
+      next: (res) => {
+        if (res.isSuccess) {
+          this.loadData();
+          if (this.selectedDispute()?.id === id) {
+            this.viewDispute(id);
+          }
+        }
+      }
+    });
+  }
+
+  exportDisputes() {
+    const now = new Date();
+    const fromDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const toDate = now.toISOString();
+    window.open(`${this.apiUrl}/disputes/export?format=csv&fromDate=${fromDate}&toDate=${toDate}`, '_blank');
+  }
 }

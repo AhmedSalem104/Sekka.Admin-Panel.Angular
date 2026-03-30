@@ -24,6 +24,8 @@ export class SettlementsComponent implements OnInit {
   totalCount = 0;
   Math = Math;
 
+  summary = signal<any>(null);
+
   showDetail = signal(false);
   selectedSettlement = signal<any>(null);
 
@@ -33,7 +35,7 @@ export class SettlementsComponent implements OnInit {
   paymentMethod = 'BankTransfer';
   transactionRef = '';
 
-  ngOnInit() { this.loadData(); }
+  ngOnInit() { this.loadData(); this.loadSummary(); }
 
   loadData() {
     this.loading.set(true);
@@ -52,6 +54,15 @@ export class SettlementsComponent implements OnInit {
         this.loading.set(false);
       },
       error: () => this.loading.set(false)
+    });
+  }
+
+  loadSummary() {
+    const now = new Date();
+    const fromDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const toDate = now.toISOString();
+    this.http.get<any>(`${this.apiUrl}/settlements/summary?fromDate=${fromDate}&toDate=${toDate}`).subscribe({
+      next: (res) => { if (res.isSuccess) this.summary.set(res.data); }
     });
   }
 

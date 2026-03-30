@@ -109,4 +109,11 @@ export class RefundsComponent implements OnInit {
       next: (res) => { if (res.isSuccess) this.loadData(); }
     });
   }
+
+  exportRefunds() {
+    const now = new Date();
+    const fromDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const toDate = now.toISOString();
+    window.open(`${this.apiUrl}/refunds/export?format=csv&fromDate=${fromDate}&toDate=${toDate}`, '_blank');
+  }
 }

@@ -11,12 +11,10 @@
 
   <!-- Logo -->
   <div class="sidebar-logo">
-    <div class="logo-icon">سِ</div>
     @if (!collapsed()) {
-      <div class="logo-text">
-        <span class="logo-name">سِكّة</span>
-        <span class="logo-subtitle">لوحة التحكم</span>
-      </div>
+      <img src="logo-dark.jpeg" alt="سِكّة" class="sidebar-logo-img" />
+    } @else {
+      <img src="logo-dark.jpeg" alt="سِكّة" class="sidebar-logo-img-sm" />
     }
     <button class="collapse-btn hide-mobile" (click)="toggleCollapse()">
       {{ collapsed() ? '→' : '←' }}
